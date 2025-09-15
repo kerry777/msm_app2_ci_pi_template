@@ -1,49 +1,323 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
-  <base href="$FLUTTER_BASE_HREF">
-
+  <base href="/">
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
 
   <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="msm">
+  <meta name="apple-mobile-web-app-title" content="client">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>MSM</title>
+  <title>MEK MSM App</title>
   <link rel="manifest" href="manifest.json">
 
   <script>
-    // The value below is injected by flutter build, do not touch.
-    const serviceWorkerVersion = '{{flutter_service_worker_version}}';
+    // The value below is injected by flutter build, do not modify.
+    const serviceWorkerVersion = "3305490458";
   </script>
+  <!-- This script adds the flutter initialization JS code -->
+  <script src="flutter.js" defer></script>
   <script src="flutter_bootstrap.js" defer></script>
+
+  <!-- 🚫 EXCEL 다운로드 차단 시스템 - BLOB URL 차단 강화 버전 -->
+  <script>
+    console.log('🔥🔥🔥 BLOB URL 차단 시스템 시작! 🔥🔥🔥');
+
+    // 전체 페이지 클릭을 감지하여 모든 클릭 이벤트를 추적
+    document.addEventListener('click', function(e) {
+        console.log('🎯 전체 클릭 감지:', e.target);
+        console.log('🎯 클릭된 요소:', e.target.tagName, e.target.className);
+        console.log('🎯 텍스트 내용:', e.target.textContent || e.target.innerText);
+    }, true);
+
+    // 1단계: 모든 다운로드 차단 (blob URL 강화)
+    function blockAllDownloads() {
+        console.log('🚫 다운로드 차단 시스템 활성화! (BLOB URL 차단 포함)');
+
+        // window.open 오버라이드 (blob URL 감지 강화)
+        const originalOpen = window.open;
+        window.open = function(url, name, specs) {
+            console.log('🌐 window.open 호출됨!');
+            console.log('🌐 URL:', url);
+            console.log('🌐 Name:', name);
+            console.log('🌐 Specs:', specs);
+
+            // Excel 관련 URL 감지 (blob URL 포함)
+            if (url) {
+                const urlLower = url.toLowerCase();
+                const isBlobUrl = url.startsWith('blob:');
+                const isExcel = urlLower.includes('.xlsx') || urlLower.includes('.xls') ||
+                               urlLower.includes('excel') || urlLower.includes('download') ||
+                               urlLower.includes('attachment') || urlLower.includes('export') ||
+                               isBlobUrl;
+
+                console.log('🔍 Excel 관련 URL 검사:', isExcel);
+                console.log('🔍 BLOB URL 여부:', isBlobUrl);
+
+                if (isExcel) {
+                    console.log('🚫🚫🚫 Excel/BLOB 다운로드 차단됨! 🚫🚫🚫');
+                    console.log('📊 Excel 뷰어로 리다이렉트!');
+
+                    // Excel 뷰어로 대체
+                    const viewerUrl = 'http://localhost/msm/excel_template_selector.html?template=quotation_kr';
+                    console.log('🔄 리다이렉트 URL:', viewerUrl);
+
+                    const result = originalOpen.call(window, viewerUrl, '_blank',
+                        'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no');
+
+                    console.log('✅ 뷰어 창 열기 결과:', result ? '성공' : '실패');
+                    return result;
+                }
+            }
+
+            console.log('✅ 일반 팝업 허용');
+            return originalOpen.call(window, url, name, specs);
+        };
+
+        // location.href 오버라이드 (blob URL 감지 강화)
+        const originalSetLocation = window.location.__lookupSetter__('href');
+        if (originalSetLocation) {
+            window.location.__defineSetter__('href', function(url) {
+                console.log('🌍 location.href 설정 시도!');
+                console.log('🌍 URL:', url);
+
+                if (url) {
+                    const urlLower = url.toLowerCase();
+                    const isBlobUrl = url.startsWith('blob:');
+                    const isExcel = urlLower.includes('.xlsx') || urlLower.includes('.xls') ||
+                                   urlLower.includes('excel') || urlLower.includes('download') ||
+                                   isBlobUrl;
+
+                    if (isExcel) {
+                        console.log('🚫 location.href BLOB/Excel 다운로드 차단:', url);
+                        const viewerUrl = 'http://localhost/msm/excel_template_selector.html?template=quotation_kr';
+                        window.open(viewerUrl, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+                        return;
+                    }
+                }
+                originalSetLocation.call(this, url);
+            });
+        }
+
+        // anchor 태그 클릭 차단 (BLOB URL 및 download 속성 감지 최강화)
+        document.addEventListener('click', function(e) {
+            console.log('🔗 문서 클릭 이벤트:', e.target);
+
+            const element = e.target.closest('a');
+            if (element) {
+                console.log('🔗 링크 요소 발견!');
+                console.log('🔗 href:', element.href);
+                console.log('🔗 download 속성:', element.getAttribute('download'));
+                console.log('🔗 target 속성:', element.target);
+
+                // Excel 다운로드 감지 조건 최강화
+                const href = element.href || '';
+                const downloadAttr = element.getAttribute('download') || '';
+
+                // 1. blob: URL 감지
+                // 2. download 속성에 Excel 관련 확장자 감지
+                // 3. 기존 Excel URL 패턴 감지
+                const isBlobUrl = href.startsWith('blob:');
+                const hasExcelDownload = downloadAttr.toLowerCase().includes('.xlsx') ||
+                                        downloadAttr.toLowerCase().includes('.xls') ||
+                                        downloadAttr.includes('견적서') ||
+                                        downloadAttr.includes('판매리스트') ||
+                                        downloadAttr.includes('상업송장') ||
+                                        downloadAttr.includes('포장리스트') ||
+                                        downloadAttr.includes('MEK');
+                const hasExcelUrl = href.toLowerCase().includes('.xlsx') ||
+                                   href.toLowerCase().includes('.xls') ||
+                                   href.toLowerCase().includes('download');
+
+                const isExcelDownload = isBlobUrl || hasExcelDownload || hasExcelUrl;
+
+                console.log('🔍 Excel 다운로드 검사:');
+                console.log('🔍 blob URL:', isBlobUrl);
+                console.log('🔍 Excel download 속성:', hasExcelDownload);
+                console.log('🔍 Excel URL 패턴:', hasExcelUrl);
+                console.log('🔍 최종 결과:', isExcelDownload);
+
+                if (isExcelDownload) {
+                    console.log('🚫🚫🚫 EXCEL 다운로드 차단! 🚫🚫🚫');
+                    console.log('🚫 차단 사유: blob URL 또는 Excel download 속성 감지');
+
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+
+                    // 다운로드 파일명에서 템플릿 결정
+                    let template = 'quotation_kr';
+                    if (downloadAttr.includes('견적서')) {
+                        if (downloadAttr.includes('영어')) template = 'quotation_en';
+                        else if (downloadAttr.includes('아랍어')) template = 'quotation_ar';
+                        else template = 'quotation_kr';
+                    } else if (downloadAttr.includes('판매리스트')) {
+                        template = 'sales_list';
+                    } else if (downloadAttr.includes('상업송장')) {
+                        template = 'commercial_invoice';
+                    } else if (downloadAttr.includes('포장리스트')) {
+                        template = 'packing_list';
+                    }
+
+                    console.log('📊 선택된 템플릿:', template);
+
+                    const viewerUrl = `http://localhost/msm/excel_template_selector.html?template=${template}`;
+                    console.log('🚀 Excel 뷰어 열기:', viewerUrl);
+
+                    const popup = window.open(viewerUrl, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+
+                    if (popup) {
+                        console.log('✅ Excel 뷰어 창 열기 성공!');
+                        alert('📊 Excel 다운로드가 차단되었습니다!\\n\\n대신 Excel 뷰어가 새 창에서 열렸습니다.\\n브라우저에서 실제 MEK 템플릿을 바로 편집하세요!');
+                    } else {
+                        console.log('❌ Excel 뷰어 창 열기 실패 - 팝업 차단됨');
+                        alert('⚠️ 팝업이 차단되었습니다. 팝업을 허용해주세요.');
+                    }
+
+                    return false;
+                }
+            }
+        }, true);
+
+        console.log('✅ 모든 다운로드 차단 메커니즘 활성화됨 (BLOB URL 포함)');
+    }
+
+    // 2단계: Flutter 버튼 감지 및 차단 (강화된 모니터링)
+    function interceptFlutterButtons() {
+        console.log('🎯 Flutter 버튼 감지 시스템 시작!');
+
+        const interval = setInterval(() => {
+            const allElements = document.querySelectorAll('*');
+            let blockedCount = 0;
+            let totalButtonCount = 0;
+
+            allElements.forEach((element) => {
+                const text = element.textContent || element.innerText || '';
+
+                // 버튼 요소 카운트
+                if (element.tagName === 'BUTTON' || element.getAttribute('role') === 'button' ||
+                    element.classList.contains('btn') || text.includes('다운로드')) {
+                    totalButtonCount++;
+                }
+
+                // Excel 다운로드 관련 텍스트 감지 (더 광범위한 패턴)
+                if ((text.includes('다운로드') || text.includes('Download') || text.includes('export') || text.includes('Export')) &&
+                    (text.includes('견적서') || text.includes('판매리스트') || text.includes('상업송장') ||
+                     text.includes('포장리스트') || text.includes('Excel') || text.includes('MEK') ||
+                     text.includes('quotation') || text.includes('invoice') || text.includes('packing'))) {
+
+                    console.log('🎯 Excel 다운로드 버튼 발견!');
+                    console.log('🎯 버튼 텍스트:', text);
+                    console.log('🎯 버튼 요소:', element);
+
+                    if (!element.hasAttribute('data-download-blocked')) {
+                        console.log('🔧 버튼 차단 설정 중...');
+                        element.setAttribute('data-download-blocked', 'true');
+
+                        // 모든 이벤트 차단 (더 강력한 차단)
+                        ['click', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'tap'].forEach(eventType => {
+                            element.addEventListener(eventType, function(e) {
+                                console.log('🚫🚫🚫 Flutter 다운로드 버튼 클릭 차단! 🚫🚫🚫');
+                                console.log('🚫 이벤트 타입:', eventType);
+                                console.log('🚫 버튼 텍스트:', text);
+
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.stopImmediatePropagation();
+
+                                // 템플릿 결정 (더 정확한 매칭)
+                                let template = 'quotation_kr';
+                                if (text.includes('견적서') || text.includes('quotation')) {
+                                    if (text.includes('영어') || text.includes('english')) template = 'quotation_en';
+                                    else if (text.includes('아랍어') || text.includes('arabic')) template = 'quotation_ar';
+                                } else if (text.includes('판매리스트') || text.includes('sales')) {
+                                    template = 'sales_list';
+                                } else if (text.includes('상업송장') || text.includes('commercial') || text.includes('invoice')) {
+                                    template = 'commercial_invoice';
+                                } else if (text.includes('포장리스트') || text.includes('packing')) {
+                                    template = 'packing_list';
+                                }
+
+                                // Excel 뷰어 열기
+                                const viewerUrl = `http://localhost/msm/excel_template_selector.html?template=${template}`;
+                                console.log(`🚀 Excel 뷰어 열기: ${viewerUrl}`);
+
+                                const popup = window.open(viewerUrl, '_blank',
+                                    'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no');
+
+                                if (popup) {
+                                    console.log('✅ Excel 뷰어 창 열기 성공!');
+                                    alert('📊 Excel 다운로드가 차단되었습니다!\\n\\n대신 Excel 뷰어가 새 창에서 열렸습니다.\\n실제 MEK 템플릿을 브라우저에서 바로 편집하세요!');
+                                } else {
+                                    console.log('❌ Excel 뷰어 창 열기 실패 - 팝업 차단됨');
+                                    alert('⚠️ 팝업이 차단되었습니다. 팝업을 허용해주세요.');
+                                }
+
+                                return false;
+                            }, true);
+                        });
+
+                        blockedCount++;
+                        console.log(`✅ 버튼 #${blockedCount} 차단 완료!`);
+                    }
+                }
+            });
+
+            console.log(`📊 버튼 모니터링 - 전체: ${totalButtonCount}, 차단됨: ${blockedCount}`);
+
+            if (blockedCount > 0) {
+                console.log(`🎉 ${blockedCount}개 다운로드 버튼 차단 완료!`);
+            }
+        }, 1000);
+
+        // 30초 후 자동 중지
+        setTimeout(() => {
+            clearInterval(interval);
+            console.log('⏰ Flutter 버튼 감지 타임아웃');
+        }, 30000);
+    }
+
+    // 즉시 차단 시스템 시작
+    console.log('🚀 시스템 초기화 중...');
+    blockAllDownloads();
+
+    // DOM이 준비되면 버튼 차단
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', interceptFlutterButtons);
+    } else {
+        interceptFlutterButtons();
+    }
+
+    // Flutter 초기화 후에도 다시 실행
+    window.addEventListener('load', function() {
+        console.log('🔄 페이지 로드 완료 - 추가 버튼 차단 실행');
+        setTimeout(interceptFlutterButtons, 2000);
+    });
+
+    console.log('🔥🔥🔥 BLOB URL Excel 차단 시스템 준비 완료! 🔥🔥🔥');
+  </script>
 </head>
 <body>
   <script>
     window.addEventListener('load', function(ev) {
-      // Flutter 부트스트랩이 이미 _flutter.loader.load()를 호출하므로 별도 호출 불필요
-      // buildConfig는 flutter_bootstrap.js에서 자동 설정됨
+      // Download main.dart.js
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+          });
+        }
+      });
     });
   </script>
 </body>
