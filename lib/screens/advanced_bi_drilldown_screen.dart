@@ -24,8 +24,8 @@ class _AdvancedBIDrilldownScreenState extends State<AdvancedBIDrilldownScreen> {
   late ZoomPanBehavior _zoomPanBehavior;
 
   // 날짜 범위 (통합분석과 동일)
-  DateTime _fromDate = DateTime(DateTime.now().year, 1, 1);
-  DateTime _toDate = DateTime(DateTime.now().year, 12, 31);
+  final DateTime _fromDate = DateTime(DateTime.now().year, 1, 1);
+  final DateTime _toDate = DateTime(DateTime.now().year, 12, 31);
 
   @override
   void initState() {
@@ -227,9 +227,9 @@ class _AdvancedBIDrilldownScreenState extends State<AdvancedBIDrilldownScreen> {
 
   // 차트 선택 이벤트 처리 (진정한 드릴다운)
   void _onChartSelectionChanged(SelectionArgs args) {
-    if (args.pointIndex == null || args.pointIndex! >= _currentData.length) return;
+    if (args.pointIndex >= _currentData.length) return;
 
-    final selectedNode = _currentData[args.pointIndex!];
+    final selectedNode = _currentData[args.pointIndex];
     _performDrilldown(selectedNode);
   }
 
@@ -410,7 +410,7 @@ class _AdvancedBIDrilldownScreenState extends State<AdvancedBIDrilldownScreen> {
             if (_drilldownPath.isNotEmpty) ...[
               const SizedBox(height: 8),
               const Text('드릴다운 경로:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(_drilldownPath.join(' → ') + ' → ${node.category}'),
+              Text('${_drilldownPath.join(' → ')} → ${node.category}'),
             ],
           ],
         ),

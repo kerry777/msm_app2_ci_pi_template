@@ -17,7 +17,7 @@ class PivotTableGrid extends StatefulWidget {
   final double cellWidth;
 
   const PivotTableGrid({
-    Key? key,
+    super.key,
     required this.result,
     required this.configuration,
     this.conditionalFormattingRules = const [],
@@ -28,7 +28,7 @@ class PivotTableGrid extends StatefulWidget {
     this.freezeHeaders = true,
     this.cellHeight = 32.0,
     this.cellWidth = 100.0,
-  }) : super(key: key);
+  });
 
   @override
   State<PivotTableGrid> createState() => _PivotTableGridState();
@@ -41,7 +41,7 @@ class _PivotTableGridState extends State<PivotTableGrid> {
   late ScrollController _headerVerticalController;
 
   Map<String, Map<String, dynamic>>? _fieldStatistics;
-  Set<String> _expandedGroups = {};
+  final Set<String> _expandedGroups = {};
 
   @override
   void initState() {
@@ -221,7 +221,7 @@ class _PivotTableGridState extends State<PivotTableGrid> {
   }
 
   Widget _buildColumnHeaders() {
-    return Container(
+    return SizedBox(
       height: _calculateColumnHeaderHeight(),
       child: Column(
         children: widget.configuration.columnFields
@@ -656,14 +656,14 @@ class PivotTableToolbar extends StatelessWidget {
   final bool showExportButtons;
 
   const PivotTableToolbar({
-    Key? key,
+    super.key,
     required this.configuration,
     required this.onConfigurationChanged,
     this.onExportExcel,
     this.onExportCsv,
     this.onRefresh,
     this.showExportButtons = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

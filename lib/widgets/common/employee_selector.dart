@@ -78,7 +78,7 @@ class _EmployeeSelectorState extends State<EmployeeSelector> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${AppLocalizations.of(context)?.get('failed_to_load_employee_list') ?? '직원 목록을 불러오는데 실패했습니다'}: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context).get('failed_to_load_employee_list') ?? '직원 목록을 불러오는데 실패했습니다'}: $e')),
         );
       }
     } finally {

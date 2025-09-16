@@ -7,7 +7,6 @@ import '../providers/auth_provider.dart';
 import '../providers/favorites_provider.dart';
 import 'main_screen.dart';
 import '../providers/language_provider.dart';
-import '../translations.dart';
 import '../l10n/app_localizations.dart';
 import 'package:flutter/services.dart';
 import '../utils/auto_test_system.dart';

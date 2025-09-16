@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
 class IntegratedMsmSpaScreen extends StatefulWidget {
-  const IntegratedMsmSpaScreen({Key? key}) : super(key: key);
+  const IntegratedMsmSpaScreen({super.key});
 
   @override
   State<IntegratedMsmSpaScreen> createState() => _IntegratedMsmSpaScreenState();
@@ -209,8 +209,8 @@ class _IntegratedMsmSpaScreenState extends State<IntegratedMsmSpaScreen> {
                 });
               },
               backgroundColor: const Color(0xFF667EEA),
-              child: const Icon(Icons.home, color: Colors.white),
               tooltip: '메인 메뉴로',
+              child: const Icon(Icons.home, color: Colors.white),
             )
           : null,
     );
@@ -614,7 +614,7 @@ class _IntegratedMsmSpaScreenState extends State<IntegratedMsmSpaScreen> {
         children: [
           Icon(Icons.info_outline, size: 64, color: Colors.grey),
           const SizedBox(height: 16),
-          Text('$_currentPage', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(_currentPage, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           const Text('해당 기능을 준비중입니다'),
         ],

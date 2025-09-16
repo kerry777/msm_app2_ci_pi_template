@@ -8,8 +8,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'dart:typed_data';
-import 'package:http_parser/http_parser.dart';
 import '../models/item_return.dart';
 
 class ApiService {

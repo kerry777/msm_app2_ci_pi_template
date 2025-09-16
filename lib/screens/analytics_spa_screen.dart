@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
 class AnalyticsSpaScreen extends StatefulWidget {
-  const AnalyticsSpaScreen({Key? key}) : super(key: key);
+  const AnalyticsSpaScreen({super.key});
 
   @override
   State<AnalyticsSpaScreen> createState() => _AnalyticsSpaScreenState();
@@ -79,7 +79,7 @@ class _AnalyticsSpaScreenState extends State<AnalyticsSpaScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      '${authProvider.userInfo?['KOR_NM']?.toString() ?? 'MSM 사용자'}',
+                                      authProvider.userInfo?['KOR_NM']?.toString() ?? 'MSM 사용자',
                                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                     ),
                                     Text(

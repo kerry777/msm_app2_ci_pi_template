@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
 class OrderSpaScreen extends StatefulWidget {
-  const OrderSpaScreen({Key? key}) : super(key: key);
+  const OrderSpaScreen({super.key});
 
   @override
   State<OrderSpaScreen> createState() => _OrderSpaScreenState();

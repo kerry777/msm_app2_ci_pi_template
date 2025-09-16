@@ -19,7 +19,7 @@ class PivotTableProvider extends ChangeNotifier {
   Map<String, List<String>> _fieldValues = {};
 
   // 계산된 필드들
-  List<CalculatedField> _calculatedFields = [];
+  final List<CalculatedField> _calculatedFields = [];
 
   PivotTableProvider(this._authProvider) {
     _initializeFields();
@@ -38,7 +38,7 @@ class PivotTableProvider extends ChangeNotifier {
   // 피벗 테이블 초기화
   Future<void> initialize() async {
     await _loadData();
-    await _buildPivotTable();
+    _buildPivotTable();
   }
 
   // 기본 필드 초기화
@@ -432,7 +432,7 @@ class PivotTableProvider extends ChangeNotifier {
       List<dynamic> row = [rowHeader];
 
       for (var columnHeader in columnHeaders) {
-        final key = '${rowHeader}|${columnHeader}';
+        final key = '$rowHeader|$columnHeader';
         final data = aggregatedData[key];
 
         if (data != null && _config.valueFields.isNotEmpty) {
@@ -644,10 +644,6 @@ class PivotTableProvider extends ChangeNotifier {
     _errorMessage = null;
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }
 
 // 피벗 테이블 설정 클래스

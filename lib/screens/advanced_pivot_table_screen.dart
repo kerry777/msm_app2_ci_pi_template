@@ -11,7 +11,7 @@ import '../providers/language_provider.dart';
 
 // 고급 피벗 테이블 화면
 class AdvancedPivotTableScreen extends StatefulWidget {
-  const AdvancedPivotTableScreen({Key? key}) : super(key: key);
+  const AdvancedPivotTableScreen({super.key});
 
   @override
   State<AdvancedPivotTableScreen> createState() => _AdvancedPivotTableScreenState();

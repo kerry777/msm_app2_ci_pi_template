@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import '../../services/api_service.dart';
 import '../../l10n/app_localizations.dart';
 
 class SelectionDialog extends StatefulWidget {

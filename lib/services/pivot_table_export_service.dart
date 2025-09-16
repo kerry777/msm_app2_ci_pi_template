@@ -203,7 +203,7 @@ class PivotTableExportService {
 
       // 행 필드 값들
       for (int j = 0; j < configuration.rowFields.length; j++) {
-        sheet.getRangeByIndex(dataStartRow + i, colIndex).setText('데이터${i}_${j}');
+        sheet.getRangeByIndex(dataStartRow + i, colIndex).setText('데이터${i}_$j');
         colIndex++;
       }
 

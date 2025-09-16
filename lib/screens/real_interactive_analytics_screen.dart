@@ -15,7 +15,7 @@ class _RealInteractiveAnalyticsScreenState extends State<RealInteractiveAnalytic
   late ZoomPanBehavior _zoomPanBehavior;
 
   List<SalesData> _currentData = [];
-  List<String> _drilldownPath = [];
+  final List<String> _drilldownPath = [];
   String _currentLevel = '지역';
 
   // 데이터 구조
@@ -57,9 +57,11 @@ class _RealInteractiveAnalyticsScreenState extends State<RealInteractiveAnalytic
   void _loadRegionData() {
     _currentData = _hierarchicalData.keys.map((region) {
       double total = 0;
-      _hierarchicalData[region]!.values.forEach((hospitals) {
-        hospitals.values.forEach((amount) => total += amount);
-      });
+      for (var hospitals in _hierarchicalData[region]!.values) {
+        for (var amount in hospitals.values) {
+          total += amount;
+        }
+      }
       return SalesData(region, total);
     }).toList();
 
@@ -70,11 +72,9 @@ class _RealInteractiveAnalyticsScreenState extends State<RealInteractiveAnalytic
   }
 
   void _onChartSelectionChanged(SelectionArgs args) {
-    if (args.pointIndex != null) {
-      final selectedPoint = _currentData[args.pointIndex!];
-      _performDrilldown(selectedPoint.category);
+    final selectedPoint = _currentData[args.pointIndex!];
+    _performDrilldown(selectedPoint.category);
     }
-  }
 
   void _performDrilldown(String selectedCategory) {
     setState(() {
@@ -193,7 +193,7 @@ class _RealInteractiveAnalyticsScreenState extends State<RealInteractiveAnalytic
             const SizedBox(height: 16),
             if (_drilldownPath.isNotEmpty) ...[
               const Text('드릴다운 경로:'),
-              Text(_drilldownPath.join(' → ') + ' → ${data.category}'),
+              Text('${_drilldownPath.join(' → ')} → ${data.category}'),
             ],
           ],
         ),
@@ -372,7 +372,7 @@ class _RealInteractiveAnalyticsScreenState extends State<RealInteractiveAnalytic
                       Row(
                         children: [
                           Text(
-                            _currentLevel + ' 매출 분석',
+                            '$_currentLevel 매출 분석',
                             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           const Spacer(),

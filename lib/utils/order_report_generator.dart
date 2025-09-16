@@ -1,12 +1,8 @@
-import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
 // import 'package:excel/excel.dart';  // 주석 처리
 import 'package:printing/printing.dart';
-import 'package:flutter/services.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 
 class OrderReportGenerator {

@@ -93,8 +93,8 @@ class _EnhancedAnalyticsScreenState extends State<EnhancedAnalyticsScreen>
   // 필터 상태
   String _selectedRegion = '전체';
   String _selectedPeriod = '2024';
-  String _selectedMetric = 'revenue';
-  List<String> _selectedHospitals = [];
+  final String _selectedMetric = 'revenue';
+  final List<String> _selectedHospitals = [];
 
   // 드릴다운 상태
   List<String> _drilldownPath = [];
@@ -443,7 +443,7 @@ class _EnhancedAnalyticsScreenState extends State<EnhancedAnalyticsScreen>
               tooltipBehavior: _tooltip,
               selectionGesture: ActivationMode.singleTap,
               onSelectionChanged: (SelectionArgs args) {
-                _onDrilldown(args.pointIndex!);
+                _onDrilldown(args.pointIndex);
               },
               series: <CartesianSeries<DrilldownData, String>>[
                 ColumnSeries<DrilldownData, String>(
@@ -696,7 +696,7 @@ class _EnhancedAnalyticsScreenState extends State<EnhancedAnalyticsScreen>
                 children: [
                   const Text('🌳 제품별 매출 트리맵', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
-                  Container(
+                  SizedBox(
                     height: 300,
                     child: _buildTreemapVisualization(),
                   ),
@@ -856,7 +856,7 @@ class _EnhancedAnalyticsScreenState extends State<EnhancedAnalyticsScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              '${percentage}%',
+              '$percentage%',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
             ),
           ],

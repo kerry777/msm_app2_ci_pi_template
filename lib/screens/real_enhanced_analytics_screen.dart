@@ -104,7 +104,7 @@ class _RealEnhancedAnalyticsScreenState extends State<RealEnhancedAnalyticsScree
 
   // 드릴다운 관련 상태
   List<RealDrilldownData> _drilldownData = [];
-  List<String> _drilldownPath = [];
+  final List<String> _drilldownPath = [];
   int _currentDrillLevel = 0;
 
   // 다차원 분석 데이터
@@ -360,7 +360,7 @@ class _RealEnhancedAnalyticsScreenState extends State<RealEnhancedAnalyticsScree
 
       // 병원 데이터 생성
       List<RealDrilldownData> hospitals = [];
-      final hospitalNames = ['${region}대병원', '${region}중앙병원', '${region}의료원'];
+      final hospitalNames = ['$region대병원', '$region중앙병원', '$region의료원'];
 
       for (int j = 0; j < hospitalNames.length; j++) {
         final hospitalAmount = amount / hospitalNames.length * (1 + j * 0.3);
@@ -510,7 +510,7 @@ class _RealEnhancedAnalyticsScreenState extends State<RealEnhancedAnalyticsScree
     List<Map<String, dynamic>> pivotData = [];
 
     pivotMap.forEach((key, value) {
-      final amounts = value['amounts']?['quarters'] as List<double>? ?? [0.0, 0.0, 0.0, 0.0];
+      final amounts = value['amounts']?['quarters'] ?? [0.0, 0.0, 0.0, 0.0];
       final total = amounts.reduce((a, b) => a + b);
 
       pivotData.add({
@@ -1162,7 +1162,7 @@ class _RealEnhancedAnalyticsScreenState extends State<RealEnhancedAnalyticsScree
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
-                  Container(
+                  SizedBox(
                     height: 300,
                     child: _buildTreemapWidget(),
                   ),

@@ -20,7 +20,7 @@ class _AgencySalesChartScreenState extends State<AgencySalesChartScreen> with Si
     'agency_sales',
     'item_sales',
     'monthly_by_hospital',
-    'monthly_by_item',
+    'monthly_by_ㅇㅅitem',
     'daily_by_hospital',
     'daily_by_item',
   ];

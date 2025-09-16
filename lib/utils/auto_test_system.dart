@@ -3,8 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:async';
 import 'dart:developer' as developer;
-import '../l10n/app_localizations.dart';
-import 'dart:collection';
 
 /* 
 🔄 MDM 앱 적용 가이드

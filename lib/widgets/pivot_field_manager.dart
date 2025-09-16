@@ -10,12 +10,12 @@ class DraggablePivotField extends StatelessWidget {
   final Color? backgroundColor;
 
   const DraggablePivotField({
-    Key? key,
+    super.key,
     required this.field,
     this.onRemove,
     this.isDragEnabled = true,
     this.backgroundColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +148,7 @@ class PivotFieldDropZone extends StatefulWidget {
   final String? helperText;
 
   const PivotFieldDropZone({
-    Key? key,
+    super.key,
     required this.label,
     required this.fields,
     required this.onFieldAdded,
@@ -158,7 +158,7 @@ class PivotFieldDropZone extends StatefulWidget {
     this.maxFields = 10,
     this.backgroundColor,
     this.helperText,
-  }) : super(key: key);
+  });
 
   @override
   State<PivotFieldDropZone> createState() => _PivotFieldDropZoneState();
@@ -201,7 +201,6 @@ class _PivotFieldDropZoneState extends State<PivotFieldDropZone> {
           },
           onWillAcceptWithDetails: (details) {
             final field = details.data;
-            if (field == null) return false;
             if (widget.fields.length >= widget.maxFields) return false;
             if (widget.fields.contains(field)) return false;
             if (widget.acceptsNumericOnly && !field.isNumeric) return false;
@@ -273,17 +272,17 @@ class _PivotFieldDropZoneState extends State<PivotFieldDropZone> {
     return ReorderableWrap(
       spacing: 4,
       runSpacing: 4,
-      children: widget.fields
-          .asMap()
-          .entries
-          .map((entry) => _buildReorderableField(entry.key, entry.value))
-          .toList(),
       onReorder: widget.onFieldReordered != null
           ? (oldIndex, newIndex) {
               HapticFeedback.selectionClick();
               widget.onFieldReordered!(oldIndex, newIndex);
             }
           : null,
+      children: widget.fields
+          .asMap()
+          .entries
+          .map((entry) => _buildReorderableField(entry.key, entry.value))
+          .toList(),
     );
   }
 
@@ -308,10 +307,10 @@ class AvailableFieldsList extends StatefulWidget {
   final String searchQuery;
 
   const AvailableFieldsList({
-    Key? key,
+    super.key,
     required this.fields,
     this.searchQuery = '',
-  }) : super(key: key);
+  });
 
   @override
   State<AvailableFieldsList> createState() => _AvailableFieldsListState();
@@ -366,12 +365,12 @@ class PivotTableFieldManager extends StatefulWidget {
   final bool isCompact;
 
   const PivotTableFieldManager({
-    Key? key,
+    super.key,
     required this.availableFields,
     required this.configuration,
     required this.onConfigurationChanged,
     this.isCompact = false,
-  }) : super(key: key);
+  });
 
   @override
   State<PivotTableFieldManager> createState() => _PivotTableFieldManagerState();
@@ -637,12 +636,12 @@ class ReorderableWrap extends StatelessWidget {
   final double runSpacing;
 
   const ReorderableWrap({
-    Key? key,
+    super.key,
     required this.children,
     this.onReorder,
     this.spacing = 0,
     this.runSpacing = 0,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -667,9 +666,9 @@ class ReorderableItem extends StatelessWidget {
   final Widget child;
 
   const ReorderableItem({
-    Key? key,
+    super.key,
     required this.child,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -22,9 +22,9 @@ class _SyncfusionPivotAnalysisScreenState extends State<SyncfusionPivotAnalysisS
   bool _disposed = false;
 
   // 피벗 설정
-  List<String> _selectedRowFields = ['HOSP_NM']; // 기본으로 병원명을 행에 배치
+  final List<String> _selectedRowFields = ['HOSP_NM']; // 기본으로 병원명을 행에 배치
   List<String> _selectedColumnFields = ['WORK_DATE']; // 기본으로 작업일을 열에 배치
-  List<String> _selectedValueFields = ['SL_QTY']; // 기본으로 판매수량을 값으로 배치
+  final List<String> _selectedValueFields = ['SL_QTY']; // 기본으로 판매수량을 값으로 배치
 
   // 사용 가능한 필드들
   final List<String> _availableFields = [

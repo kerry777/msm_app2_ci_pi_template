@@ -21,8 +21,8 @@ class _AdvancedMultiDimensionalScreenState extends State<AdvancedMultiDimensiona
   // 데이터
   List<Map<String, dynamic>> _rawData = [];
   bool _isLoading = false;
-  DateTime _fromDate = DateTime(DateTime.now().year, 1, 1);
-  DateTime _toDate = DateTime(DateTime.now().year, 12, 31);
+  final DateTime _fromDate = DateTime(DateTime.now().year, 1, 1);
+  final DateTime _toDate = DateTime(DateTime.now().year, 12, 31);
 
   // 분석 레벨 및 축 설정
   int _analysisLevel = 1; // 1: 단일축, 2: 교차축
@@ -38,7 +38,7 @@ class _AdvancedMultiDimensionalScreenState extends State<AdvancedMultiDimensiona
   late ZoomPanBehavior _zoomPanBehavior;
 
   // 처리된 차트 데이터들
-  Map<String, List<ChartDataPoint>> _chartData = {};
+  final Map<String, List<ChartDataPoint>> _chartData = {};
 
   @override
   void initState() {
@@ -116,7 +116,7 @@ class _AdvancedMultiDimensionalScreenState extends State<AdvancedMultiDimensiona
       _processCrossAxisData();
     }
 
-    debugPrint('🎯 통합분석2: 레벨${_analysisLevel} ${_primaryAxis}${_analysisLevel == 2 ? ' × $_secondaryAxis' : ''} 데이터 처리 완료');
+    debugPrint('🎯 통합분석2: 레벨$_analysisLevel $_primaryAxis${_analysisLevel == 2 ? ' × $_secondaryAxis' : ''} 데이터 처리 완료');
   }
 
   // 1레벨: 단일축 분석
@@ -217,7 +217,9 @@ class _AdvancedMultiDimensionalScreenState extends State<AdvancedMultiDimensiona
 
     // 교차 분석 결과를 차트 데이터로 변환
     final allSecondaryKeys = <String>{};
-    crossData.values.forEach((map) => allSecondaryKeys.addAll(map.keys));
+    for (var map in crossData.values) {
+      allSecondaryKeys.addAll(map.keys);
+    }
 
     // 상위 10개 primary key만 선택
     final sortedPrimary = crossData.entries.toList()
@@ -294,7 +296,7 @@ class _AdvancedMultiDimensionalScreenState extends State<AdvancedMultiDimensiona
           Row(
             children: [
               Text(
-                '분석 레벨: ${_analysisLevel}레벨',
+                '분석 레벨: $_analysisLevel레벨',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const SizedBox(width: 20),
@@ -419,7 +421,7 @@ class _AdvancedMultiDimensionalScreenState extends State<AdvancedMultiDimensiona
   Widget _buildSingleAxisChart() {
     final data = _chartData[_primaryAxis] ?? [];
 
-    return Container(
+    return SizedBox(
       height: 400,
       child: SfCartesianChart(
         title: ChartTitle(text: '$_primaryAxis 매출 분석'),
@@ -467,7 +469,7 @@ class _AdvancedMultiDimensionalScreenState extends State<AdvancedMultiDimensiona
       colorIndex++;
     }
 
-    return Container(
+    return SizedBox(
       height: 500,
       child: SfCartesianChart(
         title: ChartTitle(text: '$_primaryAxis × $_secondaryAxis 교차 분석'),
@@ -507,7 +509,7 @@ class _AdvancedMultiDimensionalScreenState extends State<AdvancedMultiDimensiona
                 children: [
                   Text('• 총 데이터: ${NumberFormat('#,###').format(_rawData.length)}건'),
                   Text('• 분석 기간: ${DateFormat('yyyy-MM-dd').format(_fromDate)} ~ ${DateFormat('yyyy-MM-dd').format(_toDate)}'),
-                  Text('• 분석 레벨: ${_analysisLevel}레벨 (${_analysisLevel == 1 ? '단일축' : '교차축'})'),
+                  Text('• 분석 레벨: $_analysisLevel레벨 (${_analysisLevel == 1 ? '단일축' : '교차축'})'),
                   Text('• 1차축: $_primaryAxis'),
                   if (_analysisLevel == 2) Text('• 2차축: $_secondaryAxis'),
                   Text('• 시간축: $_timeGrouping'),

@@ -622,7 +622,7 @@ class _QuoteManagementScreenState extends State<QuoteManagementScreen> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _selectedStatus,
+                              initialValue: _selectedStatus,
                               decoration: const InputDecoration(
                                 labelText: '상태',
                                 border: OutlineInputBorder(),

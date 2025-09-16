@@ -5,7 +5,7 @@ import '../providers/pivot_table_provider.dart';
 import '../utils/unit_converter.dart';
 
 class MultiDimensionalAnalysis extends StatefulWidget {
-  const MultiDimensionalAnalysis({Key? key}) : super(key: key);
+  const MultiDimensionalAnalysis({super.key});
 
   @override
   State<MultiDimensionalAnalysis> createState() => _MultiDimensionalAnalysisState();
@@ -368,8 +368,8 @@ class _MultiDimensionalAnalysisState extends State<MultiDimensionalAnalysis>
             ),
             const SizedBox(height: 12),
             DragTarget<PivotField>(
-              onWillAccept: (data) => data != null,
-              onAccept: (field) => onAdd(field.name),
+              onWillAcceptWithDetails: (data) => data != null,
+              onAcceptWithDetails: (field) => onAdd(field.name),
               builder: (context, candidateData, rejectedData) {
                 return Container(
                   width: double.infinity,

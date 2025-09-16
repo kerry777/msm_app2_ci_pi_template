@@ -492,13 +492,13 @@ class ResponsiveBuilder extends StatelessWidget {
   final Widget Function(BuildContext, ScreenType)? builder;
 
   const ResponsiveBuilder({
-    Key? key,
+    super.key,
     this.mobile,
     this.tablet,
     this.desktop,
     this.largeDesktop,
     this.builder,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -560,13 +560,13 @@ class ResponsivePadding extends StatelessWidget {
   final EdgeInsets? largeDesktop;
 
   const ResponsivePadding({
-    Key? key,
+    super.key,
     required this.child,
     this.mobile,
     this.tablet,
     this.desktop,
     this.largeDesktop,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -590,10 +590,10 @@ class ResponsiveCenter extends StatelessWidget {
   final double? maxWidth;
 
   const ResponsiveCenter({
-    Key? key,
+    super.key,
     required this.child,
     this.maxWidth,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

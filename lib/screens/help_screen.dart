@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/language_provider.dart';
-import '../translations.dart';
 import '../l10n/app_localizations.dart';
 import '../services/help_service.dart';
 import '../widgets/common/bottom_app_bar.dart';

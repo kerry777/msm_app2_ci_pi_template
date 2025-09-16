@@ -33,8 +33,8 @@ class _PowerBIDashboardScreenState extends State<PowerBIDashboardScreen>
   // 데이터
   List<Map<String, dynamic>> _rawData = [];
   bool _isLoading = false;
-  DateTime _fromDate = DateTime(DateTime.now().year, 1, 1);
-  DateTime _toDate = DateTime(DateTime.now().year, 12, 31);
+  final DateTime _fromDate = DateTime(DateTime.now().year, 1, 1);
+  final DateTime _toDate = DateTime(DateTime.now().year, 12, 31);
 
   // 슬라이드 모드
   bool _isSlideMode = false;
@@ -49,11 +49,11 @@ class _PowerBIDashboardScreenState extends State<PowerBIDashboardScreen>
   late Animation<Offset> _slideAnimation;
 
   // 차트 데이터들
-  Map<String, List<ChartDataPoint>> _chartDataCache = {};
+  final Map<String, List<ChartDataPoint>> _chartDataCache = {};
   Map<String, dynamic> _kpiData = {};
 
   // Master Filter 상태
-  Map<String, List<String>> _activeFilters = {};
+  final Map<String, List<String>> _activeFilters = {};
 
   // 키보드 단축키
   final FocusNode _focusNode = FocusNode();
@@ -225,7 +225,7 @@ class _PowerBIDashboardScreenState extends State<PowerBIDashboardScreen>
       return {
         'CONTINENT': continent,
         'NATION_NAME': country,
-        'CUSTOM_NAME': '${country}${customerType}_${index + 1}',
+        'CUSTOM_NAME': '$country${customerType}_${index + 1}',
         '거래처분류': customerType,
         'SUM_SALE_AMT_WON': random.nextDouble() * 100000000 + 10000000,
         'SALE_Q': random.nextInt(1000) + 100,
@@ -605,7 +605,7 @@ class _PowerBIDashboardScreenState extends State<PowerBIDashboardScreen>
   }
 
   Widget _buildKPICards(SlideTheme theme) {
-    return Container(
+    return SizedBox(
       height: 120,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,

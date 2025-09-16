@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../providers/auth_provider.dart';
-import '../providers/favorites_provider.dart';
 import 'main_screen.dart';
 import '../providers/language_provider.dart';
-import '../translations.dart';
-import '../l10n/app_localizations.dart';
-import 'package:flutter/services.dart';
 
 // 공통 폰트 크기 상수 정의
 class AppFontSizes {

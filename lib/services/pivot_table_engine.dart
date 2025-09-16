@@ -308,7 +308,7 @@ class PivotTableEngine {
               fieldStatistics[rule.fieldName],
             );
             if (percentage != null) {
-              styles['dataBar'] = '${percentage}%';
+              styles['dataBar'] = '$percentage%';
             }
             break;
 
@@ -370,7 +370,7 @@ class PivotTableEngine {
       final values = data
           .where((row) => row.hasField(field.name))
           .map((row) => row.getValue(field.name))
-          .where((value) => value is num)
+          .whereType<num>()
           .cast<num>()
           .toList();
 

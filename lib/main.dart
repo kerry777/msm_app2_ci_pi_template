@@ -9,7 +9,6 @@ import 'providers/font_size_provider.dart';
 import 'providers/sales_data_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
-import 'screens/ej2_spreadsheet_screen.dart';
 import 'l10n/app_localizations.dart';
 
 void main() async {

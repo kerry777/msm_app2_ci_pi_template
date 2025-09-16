@@ -10,13 +10,13 @@ class UserLevelProvider extends ChangeNotifier {
   // 사용자 레벨 정보
   UserLevel _currentLevel = UserLevel.viewer;
   Map<String, dynamic> _permissions = {};
-  List<String> _allowedHospitals = [];
-  List<String> _allowedRegions = [];
-  List<String> _allowedProducts = [];
+  final List<String> _allowedHospitals = [];
+  final List<String> _allowedRegions = [];
+  final List<String> _allowedProducts = [];
 
   // 데이터 접근 제한
-  Map<String, DataAccessRule> _dataAccessRules = {};
-  Map<String, List<String>> _fieldVisibility = {};
+  final Map<String, DataAccessRule> _dataAccessRules = {};
+  final Map<String, List<String>> _fieldVisibility = {};
 
   // 레벨별 기본 설정
   static const Map<UserLevel, Map<String, bool>> _defaultPermissions = {
@@ -238,9 +238,9 @@ class UserLevelProvider extends ChangeNotifier {
       // 실제로는 API를 통해 해당 지역의 병원 목록을 가져옴
       // 현재는 간단한 예시
       final mockHospitals = [
-        '${region}대학병원',
-        '${region}종합병원',
-        '${region}의료원',
+        '$region대학병원',
+        '$region종합병원',
+        '$region의료원',
       ];
 
       _allowedHospitals.addAll(mockHospitals);
@@ -449,10 +449,6 @@ class UserLevelProvider extends ChangeNotifier {
     // 실시간 권한 업데이트가 필요한 경우 사용
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }
 
 // 사용자 레벨

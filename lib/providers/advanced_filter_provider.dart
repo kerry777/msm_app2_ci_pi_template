@@ -14,7 +14,7 @@ class AdvancedFilterProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _filteredData = [];
 
   // 필터 히스토리
-  List<FilterSnapshot> _filterHistory = [];
+  final List<FilterSnapshot> _filterHistory = [];
   int _historyIndex = -1;
 
   // Getters

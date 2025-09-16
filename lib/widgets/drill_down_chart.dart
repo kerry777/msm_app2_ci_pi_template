@@ -6,7 +6,7 @@ import '../models/analytics_data.dart';
 import '../providers/drill_down_provider.dart';
 
 class DrillDownChart extends StatefulWidget {
-  const DrillDownChart({Key? key}) : super(key: key);
+  const DrillDownChart({super.key});
 
   @override
   State<DrillDownChart> createState() => _DrillDownChartState();

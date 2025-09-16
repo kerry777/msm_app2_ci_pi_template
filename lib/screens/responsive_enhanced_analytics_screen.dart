@@ -789,7 +789,7 @@ class _ResponsiveEnhancedAnalyticsScreenState extends State<ResponsiveEnhancedAn
 
   // 드릴다운 관련 상태
   List<ResponsiveDrilldownData> _drilldownData = [];
-  List<String> _drilldownPath = [];
+  final List<String> _drilldownPath = [];
   int _currentDrillLevel = 0;
 
   @override
@@ -922,7 +922,7 @@ class _ResponsiveEnhancedAnalyticsScreenState extends State<ResponsiveEnhancedAn
       final amount = (salesData[i]['SUM_SALE_AMT_WON'] ?? 0).toDouble();
 
       List<ResponsiveDrilldownData> hospitals = [];
-      final hospitalNames = ['${region}대병원', '${region}중앙병원', '${region}의료원'];
+      final hospitalNames = ['$region대병원', '$region중앙병원', '$region의료원'];
 
       for (int j = 0; j < hospitalNames.length; j++) {
         final hospitalAmount = amount / hospitalNames.length * (1 + j * 0.3);

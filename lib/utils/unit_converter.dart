@@ -143,7 +143,7 @@ class UnitConverter {
         RegExp(r'\B(?=(\d{3})+(?!\d))'),
         (match) => ',',
       );
-      return '${integerPart}.${parts[1]}';
+      return '$integerPart.${parts[1]}';
     }
   }
 

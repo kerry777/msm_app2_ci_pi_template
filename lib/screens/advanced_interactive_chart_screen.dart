@@ -21,8 +21,8 @@ class _AdvancedInteractiveChartScreenState extends State<AdvancedInteractiveChar
   List<ChartDataPoint> _filteredData = [];
 
   bool _isLoading = false;
-  DateTime _fromDate = DateTime(DateTime.now().year, 1, 1);
-  DateTime _toDate = DateTime(DateTime.now().year, 12, 31);
+  final DateTime _fromDate = DateTime(DateTime.now().year, 1, 1);
+  final DateTime _toDate = DateTime(DateTime.now().year, 12, 31);
 
   // 차트 설정
   ChartType _currentChartType = ChartType.column;
@@ -379,7 +379,7 @@ class _AdvancedInteractiveChartScreenState extends State<AdvancedInteractiveChar
     return ExpansionTile(
       title: Text(_getFieldDisplayName(field)),
       children: [
-        Container(
+        SizedBox(
           height: 150,
           child: ListView(
             children: values.map((value) => CheckboxListTile(

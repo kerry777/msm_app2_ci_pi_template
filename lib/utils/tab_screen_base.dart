@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/language_provider.dart';
-import '../translations.dart';
 import '../l10n/app_localizations.dart';
 
 abstract class TabScreenBase<T extends TabScreenBase<T>> extends StatefulWidget {

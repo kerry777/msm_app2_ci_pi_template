@@ -41,8 +41,8 @@ class RealtimeDataService extends ChangeNotifier {
   // 데이터 캐시 (통합분석의 캐싱 시스템 확장)
   final Map<String, CachedDataSet> _dataCache = {};
   final Map<String, DateTime> _lastUpdateTimes = {};
-  int _maxCachedItems = 1000;
-  Duration _cacheExpiry = const Duration(minutes: 10);
+  final int _maxCachedItems = 1000;
+  final Duration _cacheExpiry = const Duration(minutes: 10);
 
   // 구독자 관리
   final Map<String, Set<DataSubscriber>> _subscribers = {};
@@ -57,7 +57,7 @@ class RealtimeDataService extends ChangeNotifier {
 
   // 백그라운드 동기화
   final List<PendingUpdate> _pendingUpdates = [];
-  bool _isSyncInProgress = false;
+  final bool _isSyncInProgress = false;
 
   /// 서비스 초기화
   Future<void> initialize() async {
@@ -488,15 +488,13 @@ class RealtimeDataService extends ChangeNotifier {
     _isAutoRefreshEnabled = PreferencesManager.getBool('realtime_auto_refresh') ?? true;
 
     final scheduleHoursStr = PreferencesManager.getString('realtime_schedule_hours');
-    if (scheduleHoursStr != null) {
-      try {
-        final List<dynamic> decoded = jsonDecode(scheduleHoursStr);
-        _scheduleHours = decoded.cast<int>();
-      } catch (e) {
-        _scheduleHours = [6, 9, 12, 15, 18];
-      }
+    try {
+      final List<dynamic> decoded = jsonDecode(scheduleHoursStr);
+      _scheduleHours = decoded.cast<int>();
+    } catch (e) {
+      _scheduleHours = [6, 9, 12, 15, 18];
     }
-
+  
     debugPrint('📡 Realtime: Settings loaded');
   }
 

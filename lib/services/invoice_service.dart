@@ -1,12 +1,10 @@
 // Syncfusion XlsIO로 교체 완료
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xlsio;
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:universal_html/html.dart' as html;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
-import 'package:flutter/services.dart';
 
 class InvoiceService {
   // 모든 기능 비활성화
