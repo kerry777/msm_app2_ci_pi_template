@@ -37,7 +37,7 @@ import 'order_list_screen.dart';
 import 'order_analytics_screen.dart';
 import 'funnel_analysis_screen.dart';
 import 'quote_management_screen.dart';
-import 'excel_template_viewer_screen.dart'; // Syncfusion 복구 완료
+// import 'excel_template_viewer_screen.dart'; // 삭제됨 - 사용하지 않음
 // import 'syncfusion_excel_viewer_screen.dart'; // Temporarily disabled due to API changes
 import 'ej2_spreadsheet_screen.dart'; // EJ2 Spreadsheet 스크린 추가
 import 'ej2_spreadsheet_debug_screen.dart'; // EJ2 Spreadsheet 디버그 스크린 추가

@@ -519,6 +519,52 @@ class _QuoteManagementScreenState extends State<QuoteManagementScreen> {
     }
   }
 
+  void _loadTemplate(String templatePath, String templateName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$templateName 템플릿 로드'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('$templateName 템플릿을 스프레드시트 편집기에 로드합니다.'),
+              const SizedBox(height: 16),
+              const Text('• 선택한 템플릿이 자동으로 로드됩니다'),
+              const Text('• 필요한 정보를 입력하여 견적서를 작성하세요'),
+              const Text('• 작성 완료 후 저장하면 견적이 등록됩니다'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('취소'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // EJ2 스프레드시트로 이동하여 템플릿 로드
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const EJ2SpreadsheetScreen(),
+                  ),
+                ).then((_) {
+                  // 스프레드시트에서 돌아왔을 때 견적 목록 새로고침
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('$templateName 템플릿으로 견적서가 작성되었습니다')),
+                  );
+                  _fetchQuotes();
+                });
+              },
+              child: const Text('템플릿 로드'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

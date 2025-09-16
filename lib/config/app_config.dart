@@ -3,7 +3,7 @@ class AppConfig {
   // 기본 서버 주소 (API 버전 제외)
   static const String _serverUrl = String.fromEnvironment(
     'SERVER_URL',
-    defaultValue: 'http://localhost/msm',
+    defaultValue: 'http://localhost:4100',
   );
 
   // API 버전

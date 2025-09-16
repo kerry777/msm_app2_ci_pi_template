@@ -267,7 +267,7 @@ class LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
 
                     Text(
-                      'Medical Supply Management',
+                      'MEK Sales Management',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.grey[600],
                       ),

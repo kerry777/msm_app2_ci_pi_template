@@ -49,31 +49,38 @@
             console.log('🌐 Name:', name);
             console.log('🌐 Specs:', specs);
 
-            // Excel 관련 URL 감지 (blob URL 포함)
+            // Excel 관련 URL 감지 (blob URL 포함) - 하지만 univer_template.html은 허용
             if (url) {
                 const urlLower = url.toLowerCase();
                 const isBlobUrl = url.startsWith('blob:');
-                const isExcel = urlLower.includes('.xlsx') || urlLower.includes('.xls') ||
+                const isUniverTemplate = url.includes('univer_template.html');
+                const isExcel = (urlLower.includes('.xlsx') || urlLower.includes('.xls') ||
                                urlLower.includes('excel') || urlLower.includes('download') ||
                                urlLower.includes('attachment') || urlLower.includes('export') ||
-                               isBlobUrl;
+                               isBlobUrl) && !isUniverTemplate;
 
                 console.log('🔍 Excel 관련 URL 검사:', isExcel);
                 console.log('🔍 BLOB URL 여부:', isBlobUrl);
+                console.log('🔍 Univer 템플릿 여부:', isUniverTemplate);
 
                 if (isExcel) {
                     console.log('🚫🚫🚫 Excel/BLOB 다운로드 차단됨! 🚫🚫🚫');
                     console.log('📊 Excel 뷰어로 리다이렉트!');
 
-                    // Excel 뷰어로 대체
-                    const viewerUrl = 'http://localhost/msm/excel_template_selector.html?template=quotation_kr';
-                    console.log('🔄 리다이렉트 URL:', viewerUrl);
+                    // Excel 뷰어로 대체 - DISABLED for Univer system
+                    console.log('🔄 Univer 시스템 사용으로 리다이렉트 비활성화됨');
+                    // const viewerUrl = 'http://localhost/msm/excel_template_selector.html?template=quotation_kr';
 
-                    const result = originalOpen.call(window, viewerUrl, '_blank',
-                        'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no');
+                    // const result = originalOpen.call(window, viewerUrl, '_blank',
+                    //    'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no');
+
+                    // Univer 시스템이 처리하도록 원래 동작 실행
+                    const result = originalOpen.call(window, url, name, specs);
 
                     console.log('✅ 뷰어 창 열기 결과:', result ? '성공' : '실패');
                     return result;
+                } else if (isUniverTemplate) {
+                    console.log('✅ Univer 템플릿 허용: ', url);
                 }
             }
 
@@ -97,8 +104,9 @@
 
                     if (isExcel) {
                         console.log('🚫 location.href BLOB/Excel 다운로드 차단:', url);
-                        const viewerUrl = 'http://localhost/msm/excel_template_selector.html?template=quotation_kr';
-                        window.open(viewerUrl, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+                        console.log('🚀 Univer 시스템이 처리합니다');
+                        // const viewerUrl = 'http://localhost/msm/excel_template_selector.html?template=quotation_kr';
+                        // window.open(viewerUrl, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
                         return;
                     }
                 }
@@ -167,19 +175,13 @@
                     }
 
                     console.log('📊 선택된 템플릿:', template);
+                    console.log('🚀 Univer 시스템 사용으로 리다이렉트 비활성화됨');
 
-                    const viewerUrl = `http://localhost/msm/excel_template_selector.html?template=${template}`;
-                    console.log('🚀 Excel 뷰어 열기:', viewerUrl);
+                    // const viewerUrl = `http://localhost/msm/excel_template_selector.html?template=${template}`;
+                    // const popup = window.open(viewerUrl, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
 
-                    const popup = window.open(viewerUrl, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
-
-                    if (popup) {
-                        console.log('✅ Excel 뷰어 창 열기 성공!');
-                        alert('📊 Excel 다운로드가 차단되었습니다!\\n\\n대신 Excel 뷰어가 새 창에서 열렸습니다.\\n브라우저에서 실제 MEK 템플릿을 바로 편집하세요!');
-                    } else {
-                        console.log('❌ Excel 뷰어 창 열기 실패 - 팝업 차단됨');
-                        alert('⚠️ 팝업이 차단되었습니다. 팝업을 허용해주세요.');
-                    }
+                    // Univer 시스템으로 대체됨 - 알림 제거
+                    console.log('✅ 새로운 Univer 시스템이 처리합니다');
 
                     return false;
                 }
@@ -245,20 +247,13 @@
                                     template = 'packing_list';
                                 }
 
-                                // Excel 뷰어 열기
-                                const viewerUrl = `http://localhost/msm/excel_template_selector.html?template=${template}`;
-                                console.log(`🚀 Excel 뷰어 열기: ${viewerUrl}`);
+                                // Excel 뷰어 열기 - DISABLED for Univer system
+                                console.log('🚀 Univer 시스템 사용으로 리다이렉트 비활성화됨');
+                                // const viewerUrl = `http://localhost/msm/excel_template_selector.html?template=${template}`;
+                                // const popup = window.open(viewerUrl, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no');
 
-                                const popup = window.open(viewerUrl, '_blank',
-                                    'width=1400,height=900,scrollbars=yes,resizable=yes,menubar=no,toolbar=no');
-
-                                if (popup) {
-                                    console.log('✅ Excel 뷰어 창 열기 성공!');
-                                    alert('📊 Excel 다운로드가 차단되었습니다!\\n\\n대신 Excel 뷰어가 새 창에서 열렸습니다.\\n실제 MEK 템플릿을 브라우저에서 바로 편집하세요!');
-                                } else {
-                                    console.log('❌ Excel 뷰어 창 열기 실패 - 팝업 차단됨');
-                                    alert('⚠️ 팝업이 차단되었습니다. 팝업을 허용해주세요.');
-                                }
+                                // Univer 시스템으로 대체됨 - 알림 제거
+                                console.log('✅ 새로운 Univer 시스템이 처리합니다');
 
                                 return false;
                             }, true);
