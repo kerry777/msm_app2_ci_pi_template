@@ -3,42 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MEK Excel 편집기</title>
-    <!-- SheetJS CDN for immediate loading -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title id="pageTitle">MEK Excel 뷰어</title>
+    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        * {
             margin: 0;
             padding: 0;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
         }
 
-        #loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
+        .container {
+            width: 95%;
+            max-width: 1400px;
             height: 100%;
             background: rgba(255, 255, 255, 0.9);
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            overflow: hidden;
         }
 
-        .loading-spinner {
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
             width: 50px;
             height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
-            border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 20px;
+            margin: 0 auto 20px;
         }
 
         @keyframes spin {
@@ -46,14 +53,9 @@
             100% { transform: rotate(360deg); }
         }
 
-        .loading-text {
-            font-size: 18px;
-            color: #333;
-            font-weight: 500;
-        }
-
         .header {
-            background: white;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
             padding: 15px 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             display: flex;
@@ -62,76 +64,61 @@
         }
 
         .header h1 {
-            margin: 0;
-            color: #333;
             font-size: 24px;
-            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .template-info {
-            color: #666;
-            font-size: 14px;
-            background: #f8f9fa;
-            padding: 8px 16px;
-            border-radius: 20px;
-            border: 1px solid #e9ecef;
-        }
-
-        .content {
-            flex: 1;
-            padding: 20px;
+        .header-info {
             display: flex;
             flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+            font-size: 12px;
         }
 
-        .viewer-container {
-            background: white;
-            border-radius: 12px;
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #f8f9fa;
             padding: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             flex: 1;
-            min-height: 600px;
-            display: flex;
-            flex-direction: column;
+            overflow-y: auto;
         }
 
-        .toolbar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            flex-wrap: wrap;
+        .content {
+            flex: 2;
+            padding: 20px;
+            overflow: auto;
+            background: white;
         }
 
         .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-primary {
             background: #007bff;
             color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
         }
 
-        .btn-primary:hover {
+        .btn:hover {
             background: #0056b3;
             transform: translateY(-1px);
         }
 
         .btn-success {
             background: #28a745;
-            color: white;
         }
 
         .btn-success:hover {
@@ -151,7 +138,6 @@
 
         .btn-info {
             background: #17a2b8;
-            color: white;
         }
 
         .btn-info:hover {
@@ -159,162 +145,176 @@
             transform: translateY(-1px);
         }
 
-        #spreadsheetContainer {
-            flex: 1;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            min-height: 500px;
-            background: white;
-            position: relative;
-            overflow: auto;
-        }
-
-        .excel-table {
+        table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        .excel-table th,
-        .excel-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-            min-width: 80px;
-        }
-
-        .excel-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .excel-table tbody tr:hover {
-            background: #f5f5f5;
-        }
-
-        .excel-table td input {
-            border: none;
-            background: transparent;
-            width: 100%;
-            padding: 4px;
-            font-size: 14px;
-        }
-
-        .excel-table td input:focus {
-            outline: 2px solid #007bff;
+            margin-top: 20px;
             background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
-        /* 원본 Excel 테이블 전용 스타일 */
-        .excel-table.original-excel {
-            border: 3px solid #ff6b35;
-            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
         }
 
-        .excel-table.original-excel::before {
-            content: "🔥 원본 Excel 데이터";
-            position: absolute;
-            top: -25px;
-            left: 0;
-            background: #ff6b35;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        .error-display {
-            background-color: #f8d7da;
-            border: 3px solid #dc3545;
-            border-radius: 12px;
-            padding: 30px;
-            margin: 20px;
-            color: #721c24;
-            font-family: 'Courier New', monospace;
-            box-shadow: 0 8px 16px rgba(220, 53, 69, 0.3);
-        }
-
-        .error-display h3 {
-            margin-top: 0;
-            color: #dc3545;
-            font-size: 24px;
+        th {
+            background: #f8f9fa;
             font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
-        .error-display p {
-            margin: 15px 0;
-            font-size: 16px;
-            line-height: 1.5;
-            word-break: break-word;
+        td input {
+            width: 100%;
+            border: none;
+            padding: 5px;
+            background: transparent;
+        }
+
+        td input:focus {
+            outline: none;
+            background: #e3f2fd;
+        }
+
+        .cell-info {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
         }
 
         .status-bar {
-            margin-top: 15px;
-            padding: 10px;
-            background: #e9ecef;
-            border-radius: 6px;
+            background: #343a40;
+            color: white;
+            padding: 10px 20px;
             font-size: 12px;
-            color: #6c757d;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .error-message {
+            color: #dc3545;
             background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
             border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
         }
 
         .success-message {
-            background: #d4edda;
             color: #155724;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
+            background: #d4edda;
             border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            border: 3px solid #ff6b35;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);
+        }
+
+        .sidebar h3 {
+            color: #343a40;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+
+        .template-info {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 8px 16px rgba(220, 53, 69, 0.3);
+        }
+
+        .version-info {
+            font-size: 10px;
+            color: #6c757d;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                height: 100vh;
+                border-radius: 0;
+            }
+
+            .main-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-height: 200px;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="loading">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">Excel 뷰어 시작 중...</div>
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <div>Excel 뷰어 로딩 중...</div>
     </div>
 
-    <div class="header">
-        <h1>📊 MEK Excel 편집기</h1>
-        <div class="template-info" id="templateInfo">템플릿 로딩 중...</div>
-        <div class="version-info" style="font-size: 12px; color: #666; margin-top: 5px;" id="versionInfo">
-            Excel 뷰어 v빌드시각 | 스타일 렌더링 업데이트됨
-        </div>
-    </div>
-
-    <div class="content">
-        <div class="viewer-container">
-            <div class="toolbar">
-                <button class="btn btn-primary" onclick="newDocument()">📄 새 문서</button>
-                <button class="btn btn-success" onclick="saveDocument()">💾 저장</button>
-                <button class="btn btn-warning" onclick="exportExcel()">📤 Excel 내보내기</button>
-                <button class="btn btn-info" onclick="printDocument()">🖨️ 인쇄</button>
-                <button class="btn btn-primary" onclick="insertRow()">➕ 행 추가</button>
-                <button class="btn btn-primary" onclick="insertColumn()">➕ 열 추가</button>
+    <div class="container">
+        <div class="header">
+            <h1>📊 MEK Excel 뷰어</h1>
+            <div class="header-info">
+                <div id="templateInfo">템플릿 로딩 중...</div>
+                <div id="versionInfo" class="version-info">Excel 뷰어 v2024-12-16 | 스타일 렌더링 업데이트됨</div>
             </div>
+        </div>
 
-            <div id="spreadsheetContainer">
-                <div style="display: flex; justify-content: center; align-items: center; height: 100%; color: #666;">
-                    📊 Excel 뷰어를 초기화하는 중입니다...
+        <div class="main-content">
+            <div class="sidebar">
+                <h3>📋 도구 모음</h3>
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="newDocument()">📄 새 문서</button>
+                    <button class="btn btn-success" onclick="saveDocument()">💾 저장</button>
+                    <button class="btn btn-warning" onclick="exportExcel()">📤 Excel 내보내기</button>
+                    <button class="btn btn-info" onclick="printDocument()">🖨️ 인쇄</button>
+                    <button class="btn btn-primary" onclick="insertRow()">➕ 행 추가</button>
+                    <button class="btn btn-primary" onclick="insertColumn()">➕ 열 추가</button>
+                </div>
+
+                <div class="cell-info">
+                    <strong>선택된 셀:</strong> <span id="cellInfo">A1</span>
                 </div>
             </div>
 
-            <div class="status-bar">
-                <span id="statusText">준비 중...</span>
-                <span id="cellInfo">셀: A1</span>
+            <div class="content">
+                <div id="spreadsheetContainer">
+                    <!-- 스프레드시트가 여기에 렌더링됩니다 -->
+                </div>
             </div>
+        </div>
+
+        <div class="status-bar">
+            <span id="statusText">준비 중...</span>
         </div>
     </div>
 
@@ -336,11 +336,10 @@
             'QT_AR': 'MEK 견적서 (아랍어)',
             'PL': 'MEK 판매리스트',
             'CI': 'MEK 상업송장',
-            'PI': 'MEK 포장리스트'
+            'PI': 'MEK 선적송장'
         };
-        const templateNames = window.templateNames;
 
-        document.getElementById('templateInfo').textContent = templateNames[template] || '알 수 없는 템플릿';
+        document.getElementById('templateInfo').textContent = window.templateNames[template] || '알 수 없는 템플릿';
 
         // 빌드 시각 정보 업데이트
         const buildTime = new Date().toLocaleString('ko-KR', {
@@ -349,7 +348,6 @@
         }).replace(/[. ]/g, match => match === '.' ? '-' : ':').replace(/:$/, '');
         document.getElementById('versionInfo').textContent = `Excel 뷰어 v${buildTime} | 스타일 렌더링 업데이트됨`;
 
-        let currentWorksheet = null;
         let currentData = [];
 
         // 즉시 초기화 - DOM 로딩과 동시에
@@ -367,7 +365,7 @@
                 console.log('📁 원본 Excel 파일 모드 감지');
                 if (blobUrl) {
                     console.log('🔗 Blob URL 방식 사용:', blobUrl);
-                    initializeOriginalExcelViewerFromBlob(blobUrl);
+                    await initializeOriginalExcelViewerFromBlob(blobUrl);
                 } else if (data) {
                     console.log('📊 Base64 데이터 방식 사용');
                     initializeOriginalExcelViewer(data);
@@ -376,7 +374,7 @@
                     const fileParam = urlParams.get('file');
                     if (fileParam) {
                         console.log('📂 파일 파라미터 발견:', fileParam);
-                        loadOriginalExcelFromAsset(fileParam);
+                        await loadOriginalExcelFromAsset(fileParam);
                     } else {
                         console.log('⚠️ 파일 파라미터도 없음 - 기본 뷰어로 폴백');
                         initializeSheetJSViewer();
@@ -416,7 +414,7 @@
                 const workbook = XLSX.read(bytes, {type: 'array'});
                 console.log('📋 시트 목록:', workbook.SheetNames);
 
-                // 첫 번째 시트 선택
+                // 첫 번째 시트 가져오기
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
 
@@ -455,17 +453,20 @@
                 // SheetJS로 Excel 파일 읽기 - 모든 가능한 옵션 활성화
                 const workbook = XLSX.read(bytes, {
                     type: 'array',
-                    cellStyles: true,
-                    cellHTML: true,
+                    cellFormula: true,
+                    cellHTML: false,
                     cellNF: true,
+                    cellStyles: true,
                     cellText: true,
                     cellDates: true,
                     sheetStubs: true,
+                    sheetRows: 0,
                     bookDeps: true,
                     bookFiles: true,
                     bookProps: true,
                     bookSheets: true,
-                    bookVBA: true,
+                    bookVBA: false,
+                    password: "",
                     raw: false
                 });
                 console.log('📋 시트 목록:', workbook.SheetNames);
@@ -493,11 +494,11 @@
                 const sheetData = XLSX.utils.sheet_to_json(worksheet, {
                     header: 1,
                     defval: '',
-                    range: range,
+                    blankrows: true,
                     raw: false  // 포맷된 값 사용
                 });
 
-                // 실제 Excel 내용이 있는지 확인
+                // 실제 데이터가 있는지 확인
                 let hasActualContent = false;
                 for (let row of sheetData) {
                     for (let cell of row) {
@@ -519,7 +520,7 @@
                 // 전역 변수로 안전하게 저장 (스타일 정보 유지)
                 window.currentWorkbook = workbook;
                 window.currentWorksheet = worksheet;
-                window.currentData = sheetData;
+                currentData = sheetData;
 
                 // 스타일 정보 상세 분석
                 console.log('🎨 Excel 스타일 분석 시작');
@@ -529,18 +530,17 @@
                     if (cell && (cell.s || cell.c || cell.l)) {
                         console.log(`🔍 셀 ${cellAddr} 스타일 정보:`, {
                             value: cell.v,
-                            type: cell.t,
                             style: cell.s,
                             comment: cell.c,
                             link: cell.l,
+                            formula: cell.f,
                             format: cell.z,
-                            html: cell.h,
                             width: cell.w
                         });
                     }
                 }
 
-                // 헤더 업데이트
+                // 헤더 업데이트 (실제 데이터 여부 표시)
                 const statusText = hasActualContent ?
                     `🔥 수정된 원본 Excel 파일: ${firstSheetName} (실제 데이터 포함)` :
                     `📁 원본 Excel 파일: ${firstSheetName} (템플릿)`;
@@ -601,14 +601,14 @@
                 } catch (dataError) {
                     console.error('❌ 데이터 변환 오류:', dataError);
                     // 빈 데이터로 폴백
-                    currentData = [['데이터 로드 실패', ''], ['오류:', dataError.message]];
+                    currentData = [];
                     window.currentData = currentData;
                 }
 
                 // 헤더 업데이트
                 document.getElementById('templateInfo').textContent = `원본 Excel 파일: ${firstSheetName} (Asset: ${assetPath})`;
 
-                // 원본 스타일 정보를 포함한 렌더링
+                // 원본 Excel 렌더링 시도 (스타일 포함)
                 try {
                     renderOriginalSpreadsheetWithStyles();
                 } catch (renderError) {
@@ -623,7 +623,6 @@
                             <p>오류: ${renderError.message}</p>
                             <p>개발자 도구 콘솔에서 상세 정보를 확인하세요.</p>
                         </div>`;
-                    return;
                 }
 
                 updateStatus('원본 Excel 파일이 Asset에서 로드되었습니다.');
@@ -659,56 +658,44 @@
 
             const templateData = {
                 'QT': [
-                    ['MEK 견적서', '', '', '', ''],
+                    ['', '', 'MEK-ICS 견적서', '', ''],
                     ['', '', '', '', ''],
                     ['일자:', new Date().toLocaleDateString('ko-KR'), '', '견적번호:', 'QT-' + Date.now()],
                     ['고객사:', '', '', '담당자:', ''],
                     ['', '', '', '', ''],
-                    ['번호', '품목명', '수량', '단가', '금액'],
-                    ['1', '', '', '', ''],
-                    ['2', '', '', '', ''],
-                    ['3', '', '', '', ''],
-                    ['4', '', '', '', ''],
-                    ['5', '', '', '', ''],
-                    ['', '', '', '합계:', '']
+                    ['품목명', '규격', '수량', '단가', '금액'],
+                    ['', '', '', '', ''],
+                    ['', '', '', '', '']
                 ],
                 'PL': [
-                    ['MEK 판매리스트', '', '', '', ''],
+                    ['', '', 'MEK-ICS 판매리스트', '', ''],
                     ['', '', '', '', ''],
                     ['일자:', new Date().toLocaleDateString('ko-KR'), '', '리스트번호:', 'PL-' + Date.now()],
                     ['', '', '', '', ''],
-                    ['번호', '품목코드', '품목명', '재고량', '판매가격'],
-                    ['1', '', '', '', ''],
-                    ['2', '', '', '', ''],
-                    ['3', '', '', '', ''],
-                    ['4', '', '', '', ''],
-                    ['5', '', '', '', '']
+                    ['', '', '', '', ''],
+                    ['제품코드', '제품명', '재고수량', '판매가격', '비고'],
+                    ['', '', '', '', ''],
+                    ['', '', '', '', '']
                 ],
                 'CI': [
-                    ['MEK 상업송장', '', '', '', ''],
-                    ['Commercial Invoice', '', '', '', ''],
+                    ['', '', 'COMMERCIAL INVOICE', '', ''],
                     ['', '', '', '', ''],
                     ['Invoice No.:', 'CI-' + Date.now(), '', 'Date:', new Date().toLocaleDateString()],
                     ['', '', '', '', ''],
-                    ['No.', 'Description', 'Quantity', 'Unit Price', 'Amount'],
-                    ['1', '', '', '', ''],
-                    ['2', '', '', '', ''],
-                    ['3', '', '', '', ''],
-                    ['4', '', '', '', ''],
-                    ['5', '', '', '', '']
+                    ['', '', '', '', ''],
+                    ['Description', 'Specification', 'Quantity', 'Unit Price', 'Amount'],
+                    ['', '', '', '', ''],
+                    ['', '', '', '', '']
                 ],
                 'PI': [
-                    ['MEK 포장리스트', '', '', '', ''],
-                    ['Packing List', '', '', '', ''],
+                    ['', '', 'PROFORMA INVOICE', '', ''],
                     ['', '', '', '', ''],
                     ['P/L No.:', 'PI-' + Date.now(), '', 'Date:', new Date().toLocaleDateString()],
                     ['', '', '', '', ''],
-                    ['No.', 'Description', 'Quantity', 'Unit', 'Total Quantity'],
-                    ['1', '', '', '', ''],
-                    ['2', '', '', '', ''],
-                    ['3', '', '', '', ''],
-                    ['4', '', '', '', ''],
-                    ['5', '', '', '', '']
+                    ['', '', '', '', ''],
+                    ['Description', 'Specification', 'Quantity', 'Unit Price', 'Amount'],
+                    ['', '', '', '', ''],
+                    ['', '', '', '', '']
                 ]
             };
 
@@ -721,7 +708,7 @@
 
             const container = document.getElementById('spreadsheetContainer');
 
-            let html = '<table class="excel-table">';
+            let html = '<table>';
 
             currentData.forEach((row, rowIndex) => {
                 html += '<tr>';
@@ -742,6 +729,7 @@
             });
 
             html += '</table>';
+
             container.innerHTML = html;
 
             console.log('✅ 스프레드시트 렌더링 완료');
@@ -776,7 +764,7 @@
                 return;
             }
 
-            let html = '<table class="excel-table original-excel">';
+            let html = '<table>';
 
             window.currentData.forEach((row, rowIndex) => {
                 html += '<tr>';
@@ -792,9 +780,9 @@
                         console.warn(`⚠️ 셀 ${cellAddress} 접근 실패:`, e);
                     }
 
-                    // 셀 스타일 정보 추출
-                    let cellStyle = '';
+                    // 기본 셀 값
                     let cellValue = cell || '';
+                    let cellStyle = '';
 
                     if (cellObj) {
                         // 셀 값 (안전한 접근)
@@ -819,92 +807,91 @@
                                 if (style.fill) {
                                     if (style.fill.bgColor && style.fill.bgColor.rgb) {
                                         cellStyle += `background-color: #${style.fill.bgColor.rgb};`;
-                                        console.log(`🟡 셀 ${cellAddress} 배경색: #${style.fill.bgColor.rgb}`);
-                                    }
-                                    if (style.fill.fgColor && style.fill.fgColor.rgb) {
+                                        console.log(`🎨 셀 ${cellAddress} 배경색: #${style.fill.bgColor.rgb}`);
+                                    } else if (style.fill.fgColor && style.fill.fgColor.rgb) {
                                         cellStyle += `background-color: #${style.fill.fgColor.rgb};`;
-                                        console.log(`🟡 셀 ${cellAddress} 전경색: #${style.fill.fgColor.rgb}`);
+                                        console.log(`🎨 셀 ${cellAddress} 전경색: #${style.fill.fgColor.rgb}`);
                                     }
                                 }
 
-                                // 폰트 정보 - 안전한 접근
+                                // 폰트 정보
                                 if (style.font) {
-                                    // 글자색
+                                    // 폰트 색상
                                     if (style.font.color && style.font.color.rgb) {
-                                    cellStyle += `color: #${style.font.color.rgb};`;
-                                    console.log(`🔴 셀 ${cellAddress} 글자색: #${style.font.color.rgb}`);
+                                        cellStyle += `color: #${style.font.color.rgb};`;
+                                        console.log(`📝 셀 ${cellAddress} 폰트 색상: #${style.font.color.rgb}`);
+                                    }
+
+                                    // 폰트 크기
+                                    if (style.font.sz) {
+                                        cellStyle += `font-size: ${style.font.sz}px;`;
+                                        console.log(`📏 셀 ${cellAddress} 폰트 크기: ${style.font.sz}px`);
+                                    }
+
+                                    // 폰트 굵기
+                                    if (style.font.bold) {
+                                        cellStyle += 'font-weight: bold;';
+                                        console.log(`📝 셀 ${cellAddress} 굵은 글꼴`);
+                                    }
+
+                                    // 폰트 이탤릭
+                                    if (style.font.italic) {
+                                        cellStyle += 'font-style: italic;';
+                                        console.log(`📝 셀 ${cellAddress} 이탤릭체`);
+                                    }
+
+                                    // 폰트 언더라인
+                                    if (style.font.underline) {
+                                        cellStyle += 'text-decoration: underline;';
+                                        console.log(`➖ 셀 ${cellAddress} 언더라인`);
+                                    }
                                 }
 
-                                // 폰트 크기
-                                if (style.font.sz) {
-                                    cellStyle += `font-size: ${style.font.sz}pt;`;
-                                    console.log(`📏 셀 ${cellAddress} 폰트 크기: ${style.font.sz}pt`);
+                                // 정렬 정보
+                                if (style.alignment) {
+                                    if (style.alignment.horizontal) {
+                                        cellStyle += `text-align: ${style.alignment.horizontal};`;
+                                    }
+                                    if (style.alignment.vertical) {
+                                        cellStyle += `vertical-align: ${style.alignment.vertical};`;
+                                    }
                                 }
 
-                                // 폰트 굵기 (볼드)
-                                if (style.font.bold) {
-                                    cellStyle += 'font-weight: bold;';
-                                    console.log(`💪 셀 ${cellAddress} 볼드체`);
+                                // 테두리 정보
+                                if (style.border) {
+                                    cellStyle += 'border: 1px solid #000;';
                                 }
-
-                                // 폰트 이탤릭
-                                if (style.font.italic) {
-                                    cellStyle += 'font-style: italic;';
-                                    console.log(`📝 셀 ${cellAddress} 이탤릭체`);
-                                }
-
-                                // 폰트 언더라인
-                                if (style.font.underline) {
-                                    cellStyle += 'text-decoration: underline;';
-                                    console.log(`➖ 셀 ${cellAddress} 언더라인`);
-                                }
+                            } catch (error) {
+                                console.warn('⚠️ 스타일 파싱 오류:', error);
                             }
 
-                            // 정렬 정보
-                            if (style.alignment) {
-                                if (style.alignment.horizontal) {
-                                    cellStyle += `text-align: ${style.alignment.horizontal};`;
-                                }
-                                if (style.alignment.vertical) {
-                                    cellStyle += `vertical-align: ${style.alignment.vertical};`;
-                                }
+                            // 숫자/날짜 포맷팅이 있는 경우 특별한 스타일 적용
+                            if (cellObj.t === 'n' && cellObj.z) {
+                                cellStyle += 'text-align: right;';
                             }
 
-                            // 테두리 정보
-                            if (style.border) {
-                                cellStyle += 'border: 1px solid #000;';
+                            // 헤더 셀인 경우 특별한 스타일
+                            if (rowIndex === 0 || (typeof cellValue === 'string' &&
+                                (cellValue.includes('견적서') || cellValue.includes('MEK') ||
+                                 cellValue.includes('품목명') || cellValue.includes('수량')))) {
+                                cellStyle += 'font-weight: bold; background-color: #f0f0f0;';
                             }
-                        } catch (error) {
-                            console.warn('⚠️ 스타일 파싱 오류:', error);
                         }
 
-                        // 숫자/날짜 포맷팅이 있는 경우 특별한 스타일 적용
-                        if (cellObj.t === 'n' && cellObj.z) {
-                            cellStyle += 'text-align: right;';
+                        // 실제 데이터가 있는 셀들에 대해 하이라이트
+                        if (cellValue && cellValue.toString().trim() &&
+                            !cellValue.toString().includes('MEK') &&
+                            !cellValue.toString().includes('견적서') &&
+                            !cellValue.toString().includes('품목명')) {
+                            cellStyle += 'background-color: #ffffcc; border: 2px solid #ffcc00;';
                         }
 
-                        // 헤더 셀인 경우 특별한 스타일
-                        if (rowIndex === 0 || (typeof cellValue === 'string' &&
-                            (cellValue.includes('견적서') || cellValue.includes('MEK') ||
-                             cellValue.includes('품목명') || cellValue.includes('수량')))) {
-                            cellStyle += 'font-weight: bold; background-color: #f0f0f0;';
-                        }
-                    }
-
-                    // 실제 데이터가 있는 셀들에 대해 하이라이트
-                    if (cellValue && cellValue.toString().trim() &&
-                        !cellValue.toString().includes('MEK') &&
-                        !cellValue.toString().includes('견적서') &&
-                        !cellValue.toString().includes('품목명')) {
-                        cellStyle += 'background-color: #ffffcc; border: 2px solid #ffcc00;';
-                    }
-
-                    html += `<td id="${cellId}"
-                                style="border: 1px solid #ddd; padding: 8px; ${cellStyle}"
-                                onclick="selectCell(${rowIndex}, ${colIndex})"
-                                ondblclick="editCell(${rowIndex}, ${colIndex})"
-                                title="셀: ${cellAddress}">${cellValue || ''}</td>`;
-                });
+                        html += `<td id="${cellId}"
+                                    style="border: 1px solid #ddd; padding: 8px; ${cellStyle}"
+                                    onclick="selectCell(${rowIndex}, ${colIndex})"
+                                    ondblclick="editCell(${rowIndex}, ${colIndex})"
+                                    title="셀: ${cellAddress}">${cellValue || ''}</td>`;
+                    });
                 html += '</tr>';
             });
 

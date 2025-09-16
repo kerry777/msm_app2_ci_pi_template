@@ -52,6 +52,8 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString(_tokenKey);
     debugPrint('[AuthProvider._loadToken] prefs.token=$_token');
+
+
     // userInfo도 함께 로드
     final userInfoStr = prefs.getString(_userInfoKey);
     debugPrint('[AuthProvider._loadToken] prefs.userInfo=$userInfoStr');
@@ -65,8 +67,8 @@ class AuthProvider extends ChangeNotifier {
                                '';
       _userInfo = userInfo;
       debugPrint('[AuthProvider._loadToken] loaded userInfo=$_userInfo');
-      notifyListeners();
     }
+    notifyListeners();
   }
 
   Future<void> _saveToken(String token) async {
