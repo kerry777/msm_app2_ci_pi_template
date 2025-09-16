@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Univer CDN Test</title>
+    <!-- Univer CDN scripts -->
+    <script src="https://unpkg.com/@univerjs/umd/lib/univer.full.umd.js"></script>
+    <script src="https://unpkg.com/@univerjs/umd/lib/locale/en-US.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/umd/lib/univer.css">
+</head>
+<body>
+    <div id="container"></div>
+    <div id="status">Testing Univer loading...</div>
+
+    <script>
+        console.log('Testing Univer CDN loading...');
+        console.log('window keys:', Object.keys(window));
+        console.log('UniverCore:', typeof window.UniverCore);
+        console.log('UniverDesign:', typeof window.UniverDesign);
+        console.log('UniverSheets:', typeof window.UniverSheets);
+
+        // Test destructuring
+        try {
+            const { UniverCore, UniverDesign, UniverEngineRender, UniverSheets, UniverSheetsUi, UniverUi } = window;
+            console.log('Destructuring successful');
+
+            if (UniverCore) {
+                console.log('✅ UniverCore found!');
+                document.getElementById('status').textContent = '✅ Univer loaded successfully!';
+            } else {
+                console.log('❌ UniverCore not found');
+                document.getElementById('status').textContent = '❌ UniverCore not found';
+            }
+        } catch (error) {
+            console.error('❌ Error:', error);
+            document.getElementById('status').textContent = '❌ Error: ' + error.message;
+        }
+    </script>
+</body>
+</html>

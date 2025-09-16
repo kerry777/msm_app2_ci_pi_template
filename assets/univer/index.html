@@ -1,1992 +1,286 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>실제 Excel 파일 뷰어</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Univer Excel 뷰어 - 원본 파일 로딩</title>
+    <style>
+        html, body, #univer-container {
+            height: 100%;
+            margin: 0;
+        }
+        #toolbar {
+            position: fixed;
+            top: 8px;
+            left: 8px;
+            z-index: 99;
+            background: #ffffffcc;
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            box-shadow: 0 2px 8px rgba(0,0,0,.1);
+        }
+        #toolbar button {
+            margin-right: 6px;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+        }
+        #toolbar button:hover {
+            background: #f0f0f0;
+        }
+        input[type=file] {
+            display: none;
+        }
+        #status {
+            position: fixed;
+            bottom: 8px;
+            left: 8px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+    </style>
 
-  <!-- SheetJS CDN for Excel file processing -->
-  <script src="https://unpkg.com/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
+    <!-- Univer Preset CDN (공식 문서) -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/rxjs/dist/bundles/rxjs.umd.min.js"></script>
+    <script src="https://unpkg.com/echarts@5.6.0/dist/echarts.min.js"></script>
 
-  <script>
-    // 라이브러리 로드 확인
-    window.addEventListener('load', function() {
-      if (typeof XLSX === 'undefined') {
-        console.error('❌ SheetJS 라이브러리 로드 실패');
-        document.getElementById('message-area').innerHTML = '<div class="message error">❌ SheetJS 라이브러리 로드 실패. 인터넷 연결을 확인하세요.</div>';
-      } else {
-        console.log('✅ SheetJS 라이브러리 로드 성공:', XLSX.version);
-      }
-
-      if (typeof ExcelJS === 'undefined') {
-        console.error('❌ ExcelJS 라이브러리 로드 실패');
-      } else {
-        console.log('✅ ExcelJS 라이브러리 로드 성공');
-      }
-    });
-  </script>
-
-  <style>
-      * {
-          box-sizing: border-box;
-      }
-
-      html, body {
-          margin: 0;
-          padding: 0;
-          height: 100%;
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          background: #f5f5f5;
-      }
-
-      .header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 20px;
-          text-align: center;
-          font-size: 24px;
-          font-weight: bold;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      }
-
-      .controls {
-          background: white;
-          padding: 20px;
-          border-bottom: 1px solid #e0e0e0;
-          display: flex;
-          gap: 15px;
-          align-items: center;
-          flex-wrap: wrap;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-      }
-
-      button {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          padding: 12px 24px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 600;
-          transition: all 0.3s ease;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      }
-
-      button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      }
-
-      .message {
-          border-radius: 8px;
-          padding: 15px;
-          margin: 15px;
-          font-size: 14px;
-          font-weight: 500;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      }
-
-      .success {
-          color: #155724;
-          background: #d4edda;
-          border: 1px solid #c3e6cb;
-      }
-
-      .error {
-          color: #721c24;
-          background: #f8d7da;
-          border: 1px solid #f5c6cb;
-      }
-
-      .info {
-          color: #0c5460;
-          background: #d1ecf1;
-          border: 1px solid #bee5eb;
-      }
-
-      #app {
-          height: calc(100vh - 200px);
-          background: white;
-          margin: 20px;
-          border-radius: 12px;
-          padding: 20px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-          overflow: auto;
-      }
-
-      .excel-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-top: 20px;
-          font-size: 14px;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      }
-
-      .excel-table th, .excel-table td {
-          border: 1px solid #d1d5db;
-          padding: 8px 12px;
-          text-align: left;
-          white-space: nowrap;
-          min-width: 80px;
-          height: 32px;
-          vertical-align: middle;
-      }
-
-      .excel-table th {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          font-weight: 600;
-          position: sticky;
-          top: 0;
-          z-index: 10;
-      }
-
-      .excel-table tr:nth-child(even) {
-          background: #f8f9fa;
-      }
-
-      .excel-table tr:hover {
-          background: #e8f4fd;
-      }
-
-      /* 편집 가능한 셀 스타일 */
-      .editable-table td[contenteditable="true"] {
-          cursor: text;
-          position: relative;
-      }
-
-      .editable-table td[contenteditable="true"]:focus {
-          outline: 2px solid #667eea;
-          background: #fff !important;
-          box-shadow: inset 0 0 5px rgba(102, 126, 234, 0.3);
-      }
-
-      .editable-table td[contenteditable="true"]:hover {
-          background: #f0f8ff;
-          border: 1px solid #667eea;
-      }
-
-      /* 편집 중인 셀 표시 */
-      .editing-cell {
-          background: #fff8dc !important;
-          border: 2px solid #ff6b6b !important;
-      }
-
-      .loading {
-          text-align: center;
-          color: #6c757d;
-          font-style: italic;
-          padding: 40px;
-          font-size: 16px;
-      }
-
-      .file-info {
-          background: #f8f9fa;
-          border-radius: 8px;
-          padding: 15px;
-          margin-bottom: 20px;
-          border-left: 4px solid #667eea;
-      }
-
-      .file-info h3 {
-          margin: 0 0 10px 0;
-          color: #333;
-      }
-
-      .file-info p {
-          margin: 5px 0;
-          color: #666;
-      }
-
-      /* 툴박스 스타일 */
-      .toolbar {
-          background: #f8f9fa;
-          border: 1px solid #e0e0e0;
-          border-radius: 8px;
-          padding: 10px;
-          margin: 15px 20px;
-          display: flex;
-          gap: 15px;
-          align-items: center;
-          flex-wrap: wrap;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      }
-
-      .toolbar-group {
-          display: flex;
-          gap: 5px;
-          align-items: center;
-          padding: 0 10px;
-          border-right: 1px solid #d0d7de;
-      }
-
-      .toolbar-group:last-child {
-          border-right: none;
-      }
-
-      .toolbar-btn {
-          background: white;
-          border: 1px solid #d0d7de;
-          padding: 6px 10px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 12px;
-          transition: all 0.2s ease;
-          min-width: 32px;
-          height: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-      }
-
-      .toolbar-btn:hover {
-          background: #f3f4f6;
-          border-color: #9ca3af;
-      }
-
-      .toolbar-btn.active {
-          background: #667eea;
-          color: white;
-          border-color: #667eea;
-      }
-
-      .toolbar-select {
-          padding: 4px 8px;
-          border: 1px solid #d0d7de;
-          border-radius: 4px;
-          background: white;
-          font-size: 12px;
-          cursor: pointer;
-      }
-
-      .toolbar-input {
-          width: 60px;
-          padding: 4px 8px;
-          border: 1px solid #d0d7de;
-          border-radius: 4px;
-          font-size: 12px;
-          text-align: center;
-      }
-
-      .toolbar-label {
-          font-size: 11px;
-          color: #6b7280;
-          font-weight: 500;
-      }
-
-      /* 테두리 토글 기능 */
-      .no-borders .excel-table td,
-      .no-borders .excel-table th {
-          border: none !important;
-      }
-
-      .show-borders .excel-table td,
-      .show-borders .excel-table th {
-          border: 1px solid #d1d5db !important;
-      }
-
-      /* 확대/축소 기능 */
-      .zoom-container {
-          transform-origin: top left;
-          transition: transform 0.3s ease;
-      }
-
-      /* 셀 범위 선택 기능 */
-      .excel-table td.selected {
-          background-color: #4472c4 !important;
-          color: white !important;
-      }
-
-      .excel-table td.range-start {
-          background-color: #e7f3ff !important;
-          border: 2px solid #4472c4 !important;
-      }
-
-      .excel-table td.range-end {
-          background-color: #e7f3ff !important;
-          border: 2px solid #4472c4 !important;
-      }
-
-      .excel-table td.in-range {
-          background-color: #e7f3ff !important;
-          border: 1px solid #4472c4 !important;
-      }
-
-      .excel-table td.current-cell {
-          border: 3px solid #4472c4 !important;
-          background-color: #fff !important;
-      }
-
-      /* 범위 선택 정보 표시 */
-      .range-info {
-          position: fixed;
-          top: 10px;
-          right: 10px;
-          background: rgba(0, 0, 0, 0.8);
-          color: white;
-          padding: 8px 12px;
-          border-radius: 4px;
-          font-size: 12px;
-          z-index: 1000;
-          display: none;
-      }
-
-      /* 드래그 선택 시 사용자 선택 방지 */
-      .selecting {
-          user-select: none;
-          -webkit-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
-      }
-
-      /* 인쇄 미리보기 스타일 */
-      .print-preview-modal {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0, 0, 0, 0.8);
-          z-index: 9999;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-      }
-
-      .print-preview-content {
-          background: white;
-          width: 90%;
-          height: 90%;
-          border-radius: 8px;
-          position: relative;
-          display: flex;
-          flex-direction: column;
-      }
-
-      .print-preview-header {
-          background: #f8f9fa;
-          padding: 15px 20px;
-          border-bottom: 1px solid #e0e0e0;
-          border-radius: 8px 8px 0 0;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-      }
-
-      .print-preview-body {
-          flex: 1;
-          overflow: auto;
-          padding: 20px;
-          background: #f5f5f5;
-      }
-
-      .print-page {
-          background: white;
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-          margin: 0 auto 20px auto;
-          padding: 40px;
-          min-height: 297mm;
-          width: 210mm;
-      }
-
-      .print-preview-close {
-          background: #dc3545;
-          color: white;
-          border: none;
-          padding: 8px 16px;
-          border-radius: 4px;
-          cursor: pointer;
-      }
-
-      .print-preview-print {
-          background: #007bff;
-          color: white;
-          border: none;
-          padding: 8px 16px;
-          border-radius: 4px;
-          cursor: pointer;
-          margin-right: 10px;
-      }
-
-      /* 인쇄용 스타일 */
-      @media print {
-          body * {
-              visibility: hidden;
-          }
-          .print-content, .print-content * {
-              visibility: visible;
-          }
-          .print-content {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-          }
-          .header, .controls, .toolbar, #message-area {
-              display: none !important;
-          }
-          .excel-table {
-              page-break-inside: avoid;
-              border-collapse: collapse;
-              width: 100%;
-          }
-          .excel-table td, .excel-table th {
-              border: 1px solid #000 !important;
-              padding: 4px 6px;
-              font-size: 10px;
-          }
-      }
-
-      /* 페이지 설정 모달 */
-      .page-setup-modal {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background: white;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          padding: 20px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-          z-index: 10000;
-          min-width: 400px;
-      }
-
-      .page-setup-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0, 0, 0, 0.5);
-          z-index: 9999;
-      }
-  </style>
+    <script src="https://unpkg.com/@univerjs/presets/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/locales/en-US.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core/lib/index.css" />
 </head>
 <body>
-  <div class="header">
-      📊 실제 Excel 파일 뷰어 - SheetJS 기반
-  </div>
+    <div id="univer-container"></div>
 
-  <div class="controls">
-      <button onclick="loadExcelFile('quotation_kr.xlsx')">📄 견적서 템플릿</button>
-      <button onclick="loadExcelFile('pi_template.xlsx')">📋 PI 템플릿</button>
-      <button onclick="loadExcelFile('commercial_invoice.xlsx')">💼 상업송장</button>
-      <button onclick="loadExcelFile('packing_list.xlsx')">📦 포장 목록</button>
-      <button onclick="loadExcelFile('sample_quotation.xlsx')">📝 샘플 견적서</button>
-      <button onclick="testConnection()">🔗 연결 테스트</button>
-  </div>
-
-  <div id="message-area"></div>
-
-  <!-- 완전한 Excel 툴박스 -->
-  <div class="toolbar" id="excel-toolbar" style="display: none;">
-    <!-- 파일 작업 -->
-    <div class="toolbar-group">
-      <span class="toolbar-label">파일</span>
-      <button class="toolbar-btn" onclick="newWorkbook()" title="새 통합 문서">📄</button>
-      <button class="toolbar-btn" onclick="openFile()" title="파일 열기">📁</button>
-      <button class="toolbar-btn" onclick="downloadExcel()" title="저장">💾</button>
-      <button class="toolbar-btn" onclick="downloadAsCSV()" title="CSV로 저장">📊</button>
+    <div id="toolbar">
+        <button onclick="loadAsset('assets/excel_templates/quotation_kr.xlsx')">📄 견적서</button>
+        <button onclick="loadAsset('assets/excel_templates/pi_template.xlsx')">📋 PI</button>
+        <button onclick="loadAsset('assets/excel_templates/commercial_invoice.xlsx')">💼 상업송장</button>
+        <button onclick="loadAsset('assets/excel_templates/packing_list.xlsx')">📦 포장목록</button>
+        <button onclick="triggerFilePicker()">📁 파일 열기</button>
+        <button onclick="exportXlsx()">💾 저장</button>
+        <input id="fileInput" type="file" accept=".xlsx" />
     </div>
 
-    <!-- 편집 -->
-    <div class="toolbar-group">
-      <span class="toolbar-label">편집</span>
-      <button class="toolbar-btn" onclick="undoAction()" title="실행 취소">↶</button>
-      <button class="toolbar-btn" onclick="redoAction()" title="다시 실행">↷</button>
-      <button class="toolbar-btn" onclick="copySelection()" title="복사">📋</button>
-      <button class="toolbar-btn" onclick="pasteSelection()" title="붙여넣기">📌</button>
-      <button class="toolbar-btn" onclick="deleteSelection()" title="삭제">🗑️</button>
-    </div>
-
-    <!-- 서식 -->
-    <div class="toolbar-group">
-      <span class="toolbar-label">글꼴</span>
-      <select class="toolbar-select" id="fontFamily" onchange="applyFontFamily(this.value)">
-        <option value="Arial">Arial</option>
-        <option value="Helvetica">Helvetica</option>
-        <option value="Times New Roman">Times New Roman</option>
-        <option value="Courier New">Courier New</option>
-        <option value="맑은 고딕">맑은 고딕</option>
-        <option value="나눔고딕">나눔고딕</option>
-      </select>
-      <input type="number" class="toolbar-input" id="fontSize" value="11" min="6" max="72" onchange="applyFontSize(this.value)" title="글꼴 크기">
-      <button class="toolbar-btn" id="boldBtn" onclick="toggleBold()" title="굵게">B</button>
-      <button class="toolbar-btn" id="italicBtn" onclick="toggleItalic()" title="기울임">I</button>
-      <button class="toolbar-btn" id="underlineBtn" onclick="toggleUnderline()" title="밑줄">U</button>
-    </div>
-
-    <!-- 색상 -->
-    <div class="toolbar-group">
-      <span class="toolbar-label">색상</span>
-      <input type="color" class="toolbar-btn" id="fontColor" value="#000000" onchange="applyFontColor(this.value)" title="글꼴 색">
-      <input type="color" class="toolbar-btn" id="bgColor" value="#ffffff" onchange="applyBackgroundColor(this.value)" title="배경색">
-    </div>
-
-    <!-- 정렬 -->
-    <div class="toolbar-group">
-      <span class="toolbar-label">정렬</span>
-      <button class="toolbar-btn" onclick="alignLeft()" title="왼쪽 정렬">◀</button>
-      <button class="toolbar-btn" onclick="alignCenter()" title="가운데 정렬">◆</button>
-      <button class="toolbar-btn" onclick="alignRight()" title="오른쪽 정렬">▶</button>
-      <button class="toolbar-btn" onclick="alignTop()" title="위쪽 정렬">▲</button>
-      <button class="toolbar-btn" onclick="alignMiddle()" title="가운데 정렬">♦</button>
-      <button class="toolbar-btn" onclick="alignBottom()" title="아래쪽 정렬">▼</button>
-    </div>
-
-    <!-- 테두리 -->
-    <div class="toolbar-group">
-      <span class="toolbar-label">테두리</span>
-      <button class="toolbar-btn" onclick="addBorderAll()" title="모든 테두리">⊞</button>
-      <button class="toolbar-btn" onclick="addBorderOutside()" title="바깥쪽 테두리">⊡</button>
-      <button class="toolbar-btn" onclick="removeBorders()" title="테두리 제거">⊟</button>
-    </div>
-
-    <!-- 셀 병합 -->
-    <div class="toolbar-group">
-      <span class="toolbar-label">병합</span>
-      <button class="toolbar-btn" onclick="mergeCells()" title="셀 병합">⧉</button>
-      <button class="toolbar-btn" onclick="unmergeCells()" title="병합 취소">⧈</button>
-    </div>
-
-    <!-- 행/열 -->
-    <div class="toolbar-group">
-      <span class="toolbar-label">행/열</span>
-      <button class="toolbar-btn" onclick="insertRow()" title="행 삽입">➕📄</button>
-      <button class="toolbar-btn" onclick="insertColumn()" title="열 삽입">➕📋</button>
-      <button class="toolbar-btn" onclick="deleteRow()" title="행 삭제">➖📄</button>
-      <button class="toolbar-btn" onclick="deleteColumn()" title="열 삭제">➖📋</button>
-    </div>
-
-    <!-- 함수 -->
-    <div class="toolbar-group">
-      <span class="toolbar-label">함수</span>
-      <button class="toolbar-btn" onclick="insertSum()" title="합계">Σ</button>
-      <button class="toolbar-btn" onclick="insertAverage()" title="평균">μ</button>
-      <button class="toolbar-btn" onclick="insertCount()" title="개수">🔢</button>
-      <button class="toolbar-btn" onclick="insertMax()" title="최댓값">↗</button>
-      <button class="toolbar-btn" onclick="insertMin()" title="최솟값">↙</button>
-    </div>
-
-    <!-- 보기 -->
-    <div class="toolbar-group">
-      <span class="toolbar-label">보기</span>
-      <button class="toolbar-btn" id="borderToggleBtn" onclick="toggleBorders()" title="테두리 표시/숨김">⊞</button>
-      <button class="toolbar-btn" onclick="zoomIn()" title="확대">🔍+</button>
-      <button class="toolbar-btn" onclick="zoomOut()" title="축소">🔍-</button>
-      <button class="toolbar-btn" onclick="resetZoom()" title="실제 크기">100%</button>
-      <button class="toolbar-btn" onclick="toggleGridlines()" title="눈금선 표시/숨김">⊟</button>
-    </div>
-
-    <!-- 인쇄 -->
-    <div class="toolbar-group">
-      <span class="toolbar-label">인쇄</span>
-      <button class="toolbar-btn" onclick="printPreview()" title="인쇄 미리보기">👁️</button>
-      <button class="toolbar-btn" onclick="printDocument()" title="인쇄">🖨️</button>
-      <button class="toolbar-btn" onclick="pageSetup()" title="페이지 설정">📄⚙️</button>
-    </div>
-
-    <!-- 고급 기능 -->
-    <div class="toolbar-group">
-      <span class="toolbar-label">고급</span>
-      <button class="toolbar-btn" onclick="addChart()" title="차트 삽입">📈</button>
-      <button class="toolbar-btn" onclick="addImage()" title="이미지 삽입">🖼️</button>
-      <button class="toolbar-btn" onclick="addComment()" title="주석 추가">💬</button>
-      <button class="toolbar-btn" onclick="freezePanes()" title="틀 고정">🔒</button>
-      <button class="toolbar-btn" onclick="addDataValidation()" title="데이터 유효성 검사">✅</button>
-    </div>
-  </div>
-
-  <div id="app">
-      <div class="loading">📂 Excel 파일을 선택하세요...</div>
-  </div>
-
-  <!-- 범위 선택 정보 표시 -->
-  <div id="range-info" class="range-info"></div>
-
-  <script>
-      console.log('🚀 실제 Excel 파일 뷰어 시작...');
-
-      let currentWorkbook = null;
-      let currentFilename = '';
-
-      // 메시지 표시
-      function showMessage(message, type = 'success') {
-          const messageArea = document.getElementById('message-area');
-          const className = type === 'error' ? 'error' : (type === 'info' ? 'info' : 'success');
-          messageArea.innerHTML = `<div class="message ${className}">${message}</div>`;
-          console.log(`${type === 'error' ? '❌' : '✅'} ${message}`);
-      }
-
-      // Flutter에 메시지 전송
-      function sendToFlutter(action, data) {
-          try {
-              if (window.parent) {
-                  window.parent.postMessage({
-                      source: 'excel_viewer',
-                      action: action,
-                      data: data
-                  }, '*');
-              }
-          } catch (error) {
-              console.log('Flutter 메시지 전송 실패:', error);
-          }
-      }
-
-      // Excel 파일 로드
-      function loadExcelFile(filename) {
-          showMessage(`📁 ${filename} 파일 로딩 중...`, 'info');
-          currentFilename = filename;
-
-          // Try multiple paths for asset loading
-          const paths = [
-              `excel_templates/${filename}`,
-              `assets/excel_templates/${filename}`,
-              `../excel_templates/${filename}`,
-              `../../assets/excel_templates/${filename}`,
-              `/assets/excel_templates/${filename}`
-          ];
-
-          let currentPathIndex = 0;
-
-          function tryNextPath() {
-              if (currentPathIndex >= paths.length) {
-                  console.error('모든 경로에서 파일 로드 실패');
-                  showMessage(`❌ ${filename} 로드 실패: 모든 경로에서 파일을 찾을 수 없습니다`, 'error');
-                  showFallbackData(filename);
-                  return;
-              }
-
-              const filePath = paths[currentPathIndex];
-              console.log(`시도 중인 경로 [${currentPathIndex + 1}/${paths.length}]:`, filePath);
-
-              fetch(filePath)
-                  .then(response => {
-                      console.log(`경로 [${currentPathIndex + 1}] 응답 상태:`, response.status);
-                      if (!response.ok) {
-                          throw new Error(`HTTP ${response.status}`);
-                      }
-                      console.log(`✅ 성공! 경로: ${filePath}`);
-                      return response.arrayBuffer();
-                  })
-                  .then(data => {
-                      console.log('파일 데이터 크기:', data.byteLength, 'bytes');
-                      parseAndDisplayExcel(data, filename);
-                  })
-                  .catch(error => {
-                      console.log(`❌ 경로 [${currentPathIndex + 1}] 실패:`, error.message);
-                      currentPathIndex++;
-                      tryNextPath();
-                  });
-          }
-
-          tryNextPath();
-      }
-
-      // Excel 파일 파싱 및 표시
-      function parseAndDisplayExcel(arrayBuffer, filename) {
-          try {
-              console.log('📊 Excel 파일 파싱 시작...');
-
-              // SheetJS로 워크북 읽기 (수식 포함)
-              currentWorkbook = XLSX.read(arrayBuffer, {
-                  type: 'array',
-                  cellStyles: true,
-                  cellNF: true,
-                  cellHTML: true,
-                  cellText: false,
-                  cellDates: true,
-                  cellFormula: true,  // 수식 보존
-                  sheetStubs: true,   // 빈 셀도 처리
-                  WTF: false
-              });
-
-              console.log('읽은 시트 목록:', currentWorkbook.SheetNames);
-
-              if (currentWorkbook.SheetNames.length === 0) {
-                  throw new Error('Excel 파일에 시트가 없습니다');
-              }
-
-              // 첫 번째 시트 사용
-              const sheetName = currentWorkbook.SheetNames[0];
-              const worksheet = currentWorkbook.Sheets[sheetName];
-
-              // 수식 정보 로깅
-              console.log('💡 수식 정보 분석 중...');
-              Object.keys(worksheet).forEach(cellAddr => {
-                  const cell = worksheet[cellAddr];
-                  if (cell && cell.f) {
-                      console.log(`🔢 셀 ${cellAddr}: 수식 = ${cell.f}, 값 = ${cell.v}`);
-                  }
-              });
-
-              // 시트를 편집 가능한 HTML 테이블로 변환 (수식 보존)
-              const htmlTable = XLSX.utils.sheet_to_html(worksheet, {
-                  id: 'excel-data',
-                  editable: true,
-                  header: '<table class="excel-table editable-table">',
-                  footer: '</table>'
-              });
-
-              // 파일 정보 표시
-              const range = worksheet['!ref'] || 'A1:A1';
-              const fileInfo = `
-                  <div class="file-info">
-                      <h3>📂 ${filename}</h3>
-                      <p><strong>시트:</strong> ${sheetName}</p>
-                      <p><strong>범위:</strong> ${range}</p>
-                      <p><strong>시트 수:</strong> ${currentWorkbook.SheetNames.length}</p>
-                      <p><strong>상태:</strong> ✅ 실제 파일에서 로드됨</p>
-                  </div>
-              `;
-
-              // 앱 영역에 표시
-              document.getElementById('app').innerHTML = fileInfo + htmlTable;
-
-              // 편집 기능 활성화
-              enableEditing();
-
-              // 툴박스 표시
-              document.getElementById('excel-toolbar').style.display = 'flex';
-
-              showMessage(`✅ ${filename} 파일이 성공적으로 로드되었습니다! (편집 가능)`, 'success');
-
-              // Flutter에 성공 알림
-              sendToFlutter('excel_loaded', {
-                  filename: filename,
-                  sheetName: sheetName,
-                  range: range,
-                  sheetCount: currentWorkbook.SheetNames.length,
-                  source: 'real_file'
-              });
-
-          } catch (error) {
-              console.error('Excel 파싱 오류:', error);
-              showMessage(`❌ Excel 파싱 실패: ${error.message}`, 'error');
-              showFallbackData(filename);
-          }
-      }
-
-      // 폴백 데이터 표시
-      function showFallbackData(filename) {
-          console.log('폴백 데이터 생성:', filename);
-
-          let sampleData;
-          if (filename.includes('quotation') || filename.includes('견적')) {
-              sampleData = [
-                  ['견적서 (샘플 데이터)', '', '', ''],
-                  ['', '', '', ''],
-                  ['제품명', '수량', '단가', '금액'],
-                  ['프로펠러 A형', '10', '50,000', '500,000'],
-                  ['프로펠러 B형', '5', '75,000', '375,000'],
-                  ['', '', '합계:', '875,000']
-              ];
-          } else if (filename.includes('pi') || filename.includes('PI')) {
-              sampleData = [
-                  ['PROFORMA INVOICE (샘플)', '', '', ''],
-                  ['', '', '', ''],
-                  ['Item', 'Qty', 'Unit Price', 'Amount'],
-                  ['Propeller Type A', '10', '50.00', '500.00'],
-                  ['Propeller Type B', '5', '75.00', '375.00'],
-                  ['', '', 'Total:', '875.00']
-              ];
-          } else {
-              sampleData = [
-                  [`${filename} (샘플 데이터)`, '', '', ''],
-                  ['', '', '', ''],
-                  ['항목', '값1', '값2', '비고'],
-                  ['데이터1', '100', '200', '테스트'],
-                  ['데이터2', '150', '250', '샘플']
-              ];
-          }
-
-          const tableHtml = generateTableHtml(sampleData);
-          const fileInfo = `
-              <div class="file-info">
-                  <h3>📂 ${filename}</h3>
-                  <p><strong>시트:</strong> Sheet1 (샘플)</p>
-                  <p><strong>행 수:</strong> ${sampleData.length}</p>
-                  <p><strong>열 수:</strong> ${sampleData[0].length}</p>
-                  <p><strong>상태:</strong> ⚠️ 샘플 데이터로 대체됨</p>
-              </div>
-          `;
-
-          document.getElementById('app').innerHTML = fileInfo + tableHtml;
-
-          // 샘플 데이터에도 편집 기능 활성화
-          enableEditing();
-
-          // 툴박스 표시
-          document.getElementById('excel-toolbar').style.display = 'flex';
-
-          showMessage(`⚠️ ${filename} 파일 로드 실패, 샘플 데이터로 표시합니다 (편집 가능)`, 'info');
-
-          sendToFlutter('excel_loaded', {
-              filename: filename,
-              sheetName: 'Sheet1',
-              range: `A1:${String.fromCharCode(64 + sampleData[0].length)}${sampleData.length}`,
-              sheetCount: 1,
-              source: 'sample_data'
-          });
-      }
-
-      // 테이블 HTML 생성 (편집 가능)
-      function generateTableHtml(data) {
-          let html = '<table class="excel-table editable-table">';
-
-          data.forEach((row, rowIndex) => {
-              html += '<tr>';
-              row.forEach(cell => {
-                  const tag = rowIndex === 0 ? 'th' : 'td';
-                  html += `<${tag}>${cell || ''}</${tag}>`;
-              });
-              html += '</tr>';
-          });
-
-          html += '</table>';
-          return html;
-      }
-
-      // 편집 기능 활성화
-      function enableEditing() {
-          const table = document.querySelector('.excel-table');
-          if (!table) return;
-
-          // 모든 셀을 편집 가능하게 만들기 (헤더 제외)
-          const cells = table.querySelectorAll('td');
-          cells.forEach(cell => {
-              cell.setAttribute('contenteditable', 'true');
-
-              // 셀 포커스 시
-              cell.addEventListener('focus', function() {
-                  this.classList.add('editing-cell');
-
-                  // 수식이 있는 셀인지 확인하고 수식 표시
-                  const cellAddr = getCellAddress(this);
-                  const sheetName = currentWorkbook ? currentWorkbook.SheetNames[0] : null;
-                  if (currentWorkbook && sheetName) {
-                      const worksheet = currentWorkbook.Sheets[sheetName];
-                      const cellData = worksheet[cellAddr];
-                      if (cellData && cellData.f) {
-                          // 수식이 있으면 수식을 표시
-                          this.textContent = '=' + cellData.f;
-                          this.style.backgroundColor = '#e6f3ff'; // 수식 셀 표시
-                          this.title = `수식: =${cellData.f}\n계산값: ${cellData.v}`;
-                      }
-                  }
-              });
-
-              // 셀 편집 완료 시
-              cell.addEventListener('blur', function() {
-                  this.classList.remove('editing-cell');
-                  this.style.backgroundColor = ''; // 배경색 초기화
-
-                  // 편집된 내용을 워크북에 반영 및 수식 재계산
-                  updateWorkbook(this);
-                  recalculateFormulas();
-              });
-              cell.addEventListener('keydown', function(e) {
-                  if (e.key === 'Enter') {
-                      e.preventDefault();
-                      this.blur();
-                      // 다음 행의 같은 열로 이동
-                      moveToNextCell(this, 'down');
-                  } else if (e.key === 'Tab') {
-                      e.preventDefault();
-                      this.blur();
-                      // 다음 셀로 이동
-                      moveToNextCell(this, 'right');
-                  }
-              });
-          });
-
-          // 저장 버튼 추가
-          addSaveButton();
-      }
-
-      // 워크북 업데이트 (수식 지원)
-      function updateWorkbook(cell) {
-          if (!currentWorkbook) return;
-
-          const cellAddress = getCellAddress(cell);
-          const sheetName = currentWorkbook.SheetNames[0];
-          const worksheet = currentWorkbook.Sheets[sheetName];
-          const cellContent = cell.textContent.trim();
-
-          if (cellContent.startsWith('=')) {
-              // 수식인 경우
-              const formula = cellContent.substring(1); // '=' 제거
-              worksheet[cellAddress] = {
-                  f: formula,
-                  t: 'n',
-                  v: 0  // 계산값은 재계산에서 업데이트
-              };
-              console.log(`🔢 셀 ${cellAddress} 수식 업데이트: ${formula}`);
-          } else {
-              // 일반 값인 경우
-              const numValue = parseFloat(cellContent);
-              if (!isNaN(numValue)) {
-                  worksheet[cellAddress] = { v: numValue, t: 'n' };
-              } else {
-                  worksheet[cellAddress] = { v: cellContent, t: 's' };
-              }
-              console.log(`📝 셀 ${cellAddress} 값 업데이트: ${cellContent}`);
-          }
-      }
-
-      // 수식 재계산
-      function recalculateFormulas() {
-          if (!currentWorkbook) return;
-
-          try {
-              const sheetName = currentWorkbook.SheetNames[0];
-              const worksheet = currentWorkbook.Sheets[sheetName];
-
-              // 수식이 있는 셀들을 찾아서 재계산
-              Object.keys(worksheet).forEach(cellAddr => {
-                  const cell = worksheet[cellAddr];
-                  if (cell && cell.f) {
-                      try {
-                          // 간단한 수식 계산 (더 복잡한 수식은 라이브러리 필요)
-                          const result = evaluateSimpleFormula(cell.f, worksheet);
-                          cell.v = result;
-
-                          // HTML 테이블의 해당 셀 업데이트
-                          updateCellDisplay(cellAddr, result);
-
-                          console.log(`🔄 수식 재계산: ${cellAddr} = ${cell.f} → ${result}`);
-                      } catch (error) {
-                          console.error(`❌ 수식 계산 오류 (${cellAddr}):`, error);
-                          cell.v = '#ERROR!';
-                          updateCellDisplay(cellAddr, '#ERROR!');
-                      }
-                  }
-              });
-
-              showMessage('✅ 수식이 재계산되었습니다', 'success');
-          } catch (error) {
-              console.error('수식 재계산 오류:', error);
-              showMessage('⚠️ 수식 재계산 중 오류 발생', 'info');
-          }
-      }
-
-      // 간단한 수식 계산 (SUM, 사칙연산 등)
-      function evaluateSimpleFormula(formula, worksheet) {
-          // SUM 함수 처리
-          const sumMatch = formula.match(/SUM\(([A-Z]+\d+):([A-Z]+\d+)\)/i);
-          if (sumMatch) {
-              const startCell = sumMatch[1];
-              const endCell = sumMatch[2];
-              return calculateSum(startCell, endCell, worksheet);
-          }
-
-          // 간단한 사칙연산 (A1*B1, A1+B1 등)
-          const arithmeticMatch = formula.match(/([A-Z]+\d+)\s*([+\-*/])\s*([A-Z]+\d+)/);
-          if (arithmeticMatch) {
-              const cell1 = arithmeticMatch[1];
-              const operator = arithmeticMatch[2];
-              const cell2 = arithmeticMatch[3];
-              return calculateArithmetic(cell1, operator, cell2, worksheet);
-          }
-
-          // 숫자와 셀 참조 연산 (A1*100, B1+50 등)
-          const mixedMatch = formula.match(/([A-Z]+\d+)\s*([+\-*/])\s*(\d+\.?\d*)/);
-          if (mixedMatch) {
-              const cell = mixedMatch[1];
-              const operator = mixedMatch[2];
-              const number = parseFloat(mixedMatch[3]);
-              const cellValue = getCellValue(cell, worksheet);
-              return calculateValue(cellValue, operator, number);
-          }
-
-          // 기본적으로 0 반환
-          return 0;
-      }
-
-      // 합계 계산
-      function calculateSum(startCell, endCell, worksheet) {
-          let sum = 0;
-          const startCol = startCell.match(/[A-Z]+/)[0];
-          const startRow = parseInt(startCell.match(/\d+/)[0]);
-          const endRow = parseInt(endCell.match(/\d+/)[0]);
-
-          for (let row = startRow; row <= endRow; row++) {
-              const cellAddr = startCol + row;
-              const value = getCellValue(cellAddr, worksheet);
-              if (!isNaN(value)) {
-                  sum += value;
-              }
-          }
-          return sum;
-      }
-
-      // 사칙연산 계산
-      function calculateArithmetic(cell1, operator, cell2, worksheet) {
-          const value1 = getCellValue(cell1, worksheet);
-          const value2 = getCellValue(cell2, worksheet);
-          return calculateValue(value1, operator, value2);
-      }
-
-      // 값 계산
-      function calculateValue(value1, operator, value2) {
-          switch (operator) {
-              case '+': return value1 + value2;
-              case '-': return value1 - value2;
-              case '*': return value1 * value2;
-              case '/': return value2 !== 0 ? value1 / value2 : '#DIV/0!';
-              default: return 0;
-          }
-      }
-
-      // 셀 값 가져오기
-      function getCellValue(cellAddr, worksheet) {
-          const cell = worksheet[cellAddr];
-          if (cell && typeof cell.v !== 'undefined') {
-              return parseFloat(cell.v) || 0;
-          }
-          return 0;
-      }
-
-      // HTML 테이블의 셀 표시 업데이트
-      function updateCellDisplay(cellAddr, value) {
-          const table = document.querySelector('.excel-table');
-          if (!table) return;
-
-          const col = cellAddr.match(/[A-Z]+/)[0];
-          const row = parseInt(cellAddr.match(/\d+/)[0]);
-          const colIndex = col.charCodeAt(0) - 65; // A=0, B=1, ...
-
-          const tableRow = table.rows[row];
-          if (tableRow && tableRow.cells[colIndex]) {
-              tableRow.cells[colIndex].textContent = value;
-          }
-      }
-
-      // 셀 주소 가져오기
-      function getCellAddress(cell) {
-          const row = cell.parentNode.rowIndex;
-          const col = cell.cellIndex;
-          const colLetter = String.fromCharCode(65 + col); // A, B, C...
-          return colLetter + (row + 1);
-      }
-
-      // 다음 셀로 이동
-      function moveToNextCell(currentCell, direction) {
-          const table = currentCell.closest('table');
-          const currentRow = currentCell.parentNode.rowIndex;
-          const currentCol = currentCell.cellIndex;
-
-          let nextCell;
-          if (direction === 'right') {
-              nextCell = table.rows[currentRow]?.cells[currentCol + 1];
-          } else if (direction === 'down') {
-              nextCell = table.rows[currentRow + 1]?.cells[currentCol];
-          }
-
-          if (nextCell && nextCell.getAttribute('contenteditable') === 'true') {
-              nextCell.focus();
-          }
-      }
-
-      // 저장 버튼 추가
-      function addSaveButton() {
-          const controls = document.querySelector('.controls');
-          if (!controls || controls.querySelector('.save-button')) return;
-
-          const saveButton = document.createElement('button');
-          saveButton.className = 'save-button';
-          saveButton.innerHTML = '💾 Excel 저장';
-          saveButton.onclick = downloadExcel;
-          controls.appendChild(saveButton);
-      }
-
-      // Excel 파일 다운로드
-      function downloadExcel() {
-          if (!currentWorkbook) {
-              showMessage('❌ 저장할 데이터가 없습니다', 'error');
-              return;
-          }
-
-          try {
-              const wbout = XLSX.write(currentWorkbook, { bookType: 'xlsx', type: 'array' });
-              const blob = new Blob([wbout], { type: 'application/octet-stream' });
-
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = currentFilename || 'edited_spreadsheet.xlsx';
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-
-              showMessage(`✅ ${currentFilename} 파일이 저장되었습니다!`, 'success');
-
-              // Flutter에 저장 완료 알림
-              sendToFlutter('excel_saved', {
-                  filename: currentFilename,
-                  timestamp: new Date().toISOString()
-              });
-          } catch (error) {
-              console.error('Excel 저장 오류:', error);
-              showMessage(`❌ Excel 저장 실패: ${error.message}`, 'error');
-          }
-      }
-
-      // 연결 테스트
-      function testConnection() {
-          showMessage('🔗 Flutter 연결 테스트 중...', 'info');
-
-          sendToFlutter('connection_test', {
-              timestamp: new Date().toISOString(),
-              viewer: 'excel_viewer',
-              status: 'ready'
-          });
-
-          setTimeout(() => {
-              showMessage('✅ Flutter 연결 테스트 완료!', 'success');
-          }, 1000);
-      }
-
-      // 메시지 리스너 (Flutter에서 오는 메시지)
-      window.addEventListener('message', function(event) {
-          console.log('받은 메시지:', event.data);
-
-          if (event.data && event.data.action) {
-              if (event.data.action === 'loadExcel' && event.data.data && event.data.data.filePath) {
-                  const filename = event.data.data.filePath.split('/').pop();
-                  loadExcelFile(filename);
-              }
-          }
-      });
-
-      // 초기화 완료 알림
-      document.addEventListener('DOMContentLoaded', function() {
-          console.log('✅ Excel 뷰어 준비 완료');
-          showMessage('📊 Excel 뷰어가 준비되었습니다. 파일을 선택하세요!', 'success');
-
-          sendToFlutter('viewer_ready', {
-              status: 'ready',
-              capabilities: ['excel_viewing', 'sheetjs_parsing', 'real_file_loading']
-          });
-      });
-
-      // ========= 모든 ExcelJS 기능 구현 =========
-
-      // 전역 변수
-      let selectedCells = [];
-      let clipboard = null;
-      let undoStack = [];
-      let redoStack = [];
-      let currentSelection = null;
-
-      // 새 통합 문서
-      function newWorkbook() {
-          if (confirm('새 통합 문서를 만드시겠습니까? 현재 작업이 손실됩니다.')) {
-              const sampleData = [
-                  ['A1', 'B1', 'C1', 'D1'],
-                  ['A2', 'B2', 'C2', 'D2'],
-                  ['A3', 'B3', 'C3', 'D3']
-              ];
-              const tableHtml = generateTableHtml(sampleData);
-              document.getElementById('app').innerHTML = tableHtml;
-              enableEditing();
-              document.getElementById('excel-toolbar').style.display = 'flex';
-              showMessage('✅ 새 통합 문서가 생성되었습니다', 'success');
-          }
-      }
-
-      // 파일 열기
-      function openFile() {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = '.xlsx,.xls,.csv';
-          input.onchange = function(e) {
-              const file = e.target.files[0];
-              if (file) {
-                  const reader = new FileReader();
-                  reader.onload = function(e) {
-                      const data = new Uint8Array(e.target.result);
-                      parseAndDisplayExcel(data.buffer, file.name);
-                  };
-                  reader.readAsArrayBuffer(file);
-              }
-          };
-          input.click();
-      }
-
-      // CSV로 저장
-      function downloadAsCSV() {
-          if (!currentWorkbook) {
-              showMessage('❌ 저장할 데이터가 없습니다', 'error');
-              return;
-          }
-
-          try {
-              const sheetName = currentWorkbook.SheetNames[0];
-              const worksheet = currentWorkbook.Sheets[sheetName];
-              const csv = XLSX.utils.sheet_to_csv(worksheet);
-
-              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = (currentFilename || 'spreadsheet').replace('.xlsx', '.csv');
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-
-              showMessage(`✅ CSV 파일이 저장되었습니다!`, 'success');
-          } catch (error) {
-              console.error('CSV 저장 오류:', error);
-              showMessage(`❌ CSV 저장 실패: ${error.message}`, 'error');
-          }
-      }
-
-      // 실행 취소
-      function undoAction() {
-          if (undoStack.length > 0) {
-              const lastAction = undoStack.pop();
-              redoStack.push(lastAction);
-              // 실행 취소 로직 구현
-              showMessage('✅ 실행 취소 완료', 'success');
-          } else {
-              showMessage('⚠️ 실행 취소할 작업이 없습니다', 'info');
-          }
-      }
-
-      // 다시 실행
-      function redoAction() {
-          if (redoStack.length > 0) {
-              const action = redoStack.pop();
-              undoStack.push(action);
-              // 다시 실행 로직 구현
-              showMessage('✅ 다시 실행 완료', 'success');
-          } else {
-              showMessage('⚠️ 다시 실행할 작업이 없습니다', 'info');
-          }
-      }
-
-      // 복사
-      function copySelection() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              clipboard = selectedCell.textContent;
-              showMessage('✅ 복사 완료', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 붙여넣기
-      function pasteSelection() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell && clipboard !== null) {
-              selectedCell.textContent = clipboard;
-              updateWorkbook(selectedCell);
-              showMessage('✅ 붙여넣기 완료', 'success');
-          } else {
-              showMessage('⚠️ 붙여넣을 내용이 없거나 셀이 선택되지 않았습니다', 'info');
-          }
-      }
-
-      // 삭제
-      function deleteSelection() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.textContent = '';
-              updateWorkbook(selectedCell);
-              showMessage('✅ 삭제 완료', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 글꼴 패밀리 적용
-      function applyFontFamily(fontFamily) {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.fontFamily = fontFamily;
-              showMessage(`✅ 글꼴이 ${fontFamily}로 변경되었습니다`, 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 글꼴 크기 적용
-      function applyFontSize(fontSize) {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.fontSize = fontSize + 'px';
-              showMessage(`✅ 글꼴 크기가 ${fontSize}px로 변경되었습니다`, 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 굵게 토글
-      function toggleBold() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              const isBold = selectedCell.style.fontWeight === 'bold';
-              selectedCell.style.fontWeight = isBold ? 'normal' : 'bold';
-              document.getElementById('boldBtn').classList.toggle('active', !isBold);
-              showMessage(`✅ 굵게 ${!isBold ? '적용' : '해제'}`, 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 기울임 토글
-      function toggleItalic() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              const isItalic = selectedCell.style.fontStyle === 'italic';
-              selectedCell.style.fontStyle = isItalic ? 'normal' : 'italic';
-              document.getElementById('italicBtn').classList.toggle('active', !isItalic);
-              showMessage(`✅ 기울임 ${!isItalic ? '적용' : '해제'}`, 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 밑줄 토글
-      function toggleUnderline() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              const isUnderlined = selectedCell.style.textDecoration === 'underline';
-              selectedCell.style.textDecoration = isUnderlined ? 'none' : 'underline';
-              document.getElementById('underlineBtn').classList.toggle('active', !isUnderlined);
-              showMessage(`✅ 밑줄 ${!isUnderlined ? '적용' : '해제'}`, 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 글꼴 색상 적용
-      function applyFontColor(color) {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.color = color;
-              showMessage(`✅ 글꼴 색상이 변경되었습니다`, 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 배경색 적용
-      function applyBackgroundColor(color) {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.backgroundColor = color;
-              showMessage(`✅ 배경색이 변경되었습니다`, 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 정렬 함수들
-      function alignLeft() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.textAlign = 'left';
-              showMessage('✅ 왼쪽 정렬 적용', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      function alignCenter() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.textAlign = 'center';
-              showMessage('✅ 가운데 정렬 적용', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      function alignRight() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.textAlign = 'right';
-              showMessage('✅ 오른쪽 정렬 적용', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      function alignTop() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.verticalAlign = 'top';
-              showMessage('✅ 위쪽 정렬 적용', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      function alignMiddle() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.verticalAlign = 'middle';
-              showMessage('✅ 가운데 정렬 적용', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      function alignBottom() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.verticalAlign = 'bottom';
-              showMessage('✅ 아래쪽 정렬 적용', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 테두리 함수들
-      function addBorderAll() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.border = '2px solid #333';
-              showMessage('✅ 모든 테두리 추가', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      function addBorderOutside() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.border = '2px solid #333';
-              showMessage('✅ 바깥쪽 테두리 추가', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      function removeBorders() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.style.border = '1px solid #d1d5db';
-              showMessage('✅ 테두리 제거', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 셀 병합/병합 취소
-      function mergeCells() {
-          showMessage('✅ 셀 병합 (구현 예정)', 'info');
-      }
-
-      function unmergeCells() {
-          showMessage('✅ 병합 취소 (구현 예정)', 'info');
-      }
-
-      // 행/열 삽입/삭제
-      function insertRow() {
-          showMessage('✅ 행 삽입 (구현 예정)', 'info');
-      }
-
-      function insertColumn() {
-          showMessage('✅ 열 삽입 (구현 예정)', 'info');
-      }
-
-      function deleteRow() {
-          showMessage('✅ 행 삭제 (구현 예정)', 'info');
-      }
-
-      function deleteColumn() {
-          showMessage('✅ 열 삭제 (구현 예정)', 'info');
-      }
-
-      // 함수 삽입
-      function insertSum() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.textContent = '=SUM()';
-              showMessage('✅ SUM 함수 삽입', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      function insertAverage() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.textContent = '=AVERAGE()';
-              showMessage('✅ AVERAGE 함수 삽입', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      function insertCount() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.textContent = '=COUNT()';
-              showMessage('✅ COUNT 함수 삽입', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      function insertMax() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.textContent = '=MAX()';
-              showMessage('✅ MAX 함수 삽입', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      function insertMin() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              selectedCell.textContent = '=MIN()';
-              showMessage('✅ MIN 함수 삽입', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 고급 기능들
-      function addChart() {
-          showMessage('📈 차트 삽입 기능 (구현 예정)', 'info');
-      }
-
-      function addImage() {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = 'image/*';
-          input.onchange = function(e) {
-              const file = e.target.files[0];
-              if (file) {
-                  showMessage('🖼️ 이미지 삽입 기능 (구현 예정)', 'info');
-              }
-          };
-          input.click();
-      }
-
-      function addComment() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              const comment = prompt('주석을 입력하세요:');
-              if (comment) {
-                  selectedCell.title = comment;
-                  selectedCell.style.position = 'relative';
-                  selectedCell.style.backgroundColor = '#fff8dc';
-                  showMessage('✅ 주석이 추가되었습니다', 'success');
-              }
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      function freezePanes() {
-          showMessage('🔒 틀 고정 기능 (구현 예정)', 'info');
-      }
-
-      function addDataValidation() {
-          showMessage('✅ 데이터 유효성 검사 기능 (구현 예정)', 'info');
-      }
-
-      // ============= 새로운 기능들 =============
-
-      // 전역 변수
-      let currentZoom = 1.0;
-      let bordersVisible = true;
-      let gridlinesVisible = true;
-
-      // 테두리 표시/숨김 토글
-      function toggleBorders() {
-          const appContainer = document.getElementById('app');
-          const toggleBtn = document.getElementById('borderToggleBtn');
-
-          bordersVisible = !bordersVisible;
-
-          if (bordersVisible) {
-              appContainer.classList.remove('no-borders');
-              appContainer.classList.add('show-borders');
-              toggleBtn.classList.add('active');
-              toggleBtn.innerHTML = '⊞';
-              showMessage('✅ 테두리 표시됨', 'success');
-          } else {
-              appContainer.classList.remove('show-borders');
-              appContainer.classList.add('no-borders');
-              toggleBtn.classList.remove('active');
-              toggleBtn.innerHTML = '⊟';
-              showMessage('✅ 테두리 숨김', 'success');
-          }
-      }
-
-      // 확대 기능
-      function zoomIn() {
-          currentZoom = Math.min(currentZoom + 0.1, 3.0);
-          applyZoom();
-          showMessage(`🔍 확대: ${Math.round(currentZoom * 100)}%`, 'info');
-      }
-
-      // 축소 기능
-      function zoomOut() {
-          currentZoom = Math.max(currentZoom - 0.1, 0.3);
-          applyZoom();
-          showMessage(`🔍 축소: ${Math.round(currentZoom * 100)}%`, 'info');
-      }
-
-      // 실제 크기로 재설정
-      function resetZoom() {
-          currentZoom = 1.0;
-          applyZoom();
-          showMessage('🔍 실제 크기로 재설정', 'info');
-      }
-
-      // 확대/축소 적용
-      function applyZoom() {
-          const appContainer = document.getElementById('app');
-          appContainer.style.transform = `scale(${currentZoom})`;
-          appContainer.style.transformOrigin = 'top left';
-      }
-
-      // 눈금선 표시/숨김 토글
-      function toggleGridlines() {
-          const tables = document.querySelectorAll('.excel-table');
-          gridlinesVisible = !gridlinesVisible;
-
-          tables.forEach(table => {
-              if (gridlinesVisible) {
-                  table.style.borderCollapse = 'collapse';
-                  showMessage('✅ 눈금선 표시됨', 'success');
-              } else {
-                  table.style.borderCollapse = 'separate';
-                  table.style.borderSpacing = '0';
-                  showMessage('✅ 눈금선 숨김', 'success');
-              }
-          });
-      }
-
-      // ============= 인쇄 기능들 =============
-
-      // 인쇄 미리보기
-      function printPreview() {
-          const excelData = document.querySelector('.excel-table');
-          if (!excelData) {
-              showMessage('❌ 인쇄할 데이터가 없습니다', 'error');
-              return;
-          }
-
-          // 미리보기 모달 생성
-          const modal = document.createElement('div');
-          modal.className = 'print-preview-modal';
-          modal.innerHTML = `
-              <div class="print-preview-content">
-                  <div class="print-preview-header">
-                      <h3>📄 인쇄 미리보기</h3>
-                      <div>
-                          <button class="print-preview-print" onclick="printFromPreview()">🖨️ 인쇄</button>
-                          <button class="print-preview-close" onclick="closePrintPreview()">❌ 닫기</button>
-                      </div>
-                  </div>
-                  <div class="print-preview-body">
-                      <div class="print-page">
-                          <h2>${currentFilename || 'Excel 파일'}</h2>
-                          <div class="print-content">${excelData.outerHTML}</div>
-                      </div>
-                  </div>
-              </div>
-          `;
-
-          document.body.appendChild(modal);
-          showMessage('👁️ 인쇄 미리보기 열림', 'info');
-      }
-
-      // 미리보기에서 인쇄
-      function printFromPreview() {
-          window.print();
-      }
-
-      // 미리보기 닫기
-      function closePrintPreview() {
-          const modal = document.querySelector('.print-preview-modal');
-          if (modal) {
-              modal.remove();
-          }
-      }
-
-      // 직접 인쇄
-      function printDocument() {
-          const excelData = document.querySelector('.excel-table');
-          if (!excelData) {
-              showMessage('❌ 인쇄할 데이터가 없습니다', 'error');
-              return;
-          }
-
-          // 인쇄용 스타일 적용
-          const printContent = document.createElement('div');
-          printContent.className = 'print-content';
-          printContent.innerHTML = `
-              <h2 style="text-align: center; margin-bottom: 20px;">${currentFilename || 'Excel 파일'}</h2>
-              ${excelData.outerHTML}
-          `;
-
-          document.body.appendChild(printContent);
-          window.print();
-          document.body.removeChild(printContent);
-
-          showMessage('🖨️ 인쇄 대화상자 열림', 'info');
-      }
-
-      // 페이지 설정
-      function pageSetup() {
-          const overlay = document.createElement('div');
-          overlay.className = 'page-setup-overlay';
-          overlay.onclick = closePageSetup;
-
-          const modal = document.createElement('div');
-          modal.className = 'page-setup-modal';
-          modal.innerHTML = `
-              <h3>📄 페이지 설정</h3>
-              <div style="margin: 15px 0;">
-                  <label>용지 크기:</label><br>
-                  <select style="width: 100%; padding: 5px; margin-top: 5px;">
-                      <option value="A4">A4 (210 × 297 mm)</option>
-                      <option value="A3">A3 (297 × 420 mm)</option>
-                      <option value="Letter">Letter (8.5 × 11 in)</option>
-                  </select>
-              </div>
-              <div style="margin: 15px 0;">
-                  <label>방향:</label><br>
-                  <input type="radio" name="orientation" value="portrait" checked> 세로
-                  <input type="radio" name="orientation" value="landscape" style="margin-left: 20px;"> 가로
-              </div>
-              <div style="margin: 15px 0;">
-                  <label>여백 (mm):</label><br>
-                  <div style="display: flex; gap: 10px; margin-top: 5px;">
-                      <input type="number" placeholder="위" value="25" style="width: 60px;">
-                      <input type="number" placeholder="아래" value="25" style="width: 60px;">
-                      <input type="number" placeholder="왼쪽" value="20" style="width: 60px;">
-                      <input type="number" placeholder="오른쪽" value="20" style="width: 60px;">
-                  </div>
-              </div>
-              <div style="text-align: right; margin-top: 20px;">
-                  <button onclick="closePageSetup()" style="margin-right: 10px; padding: 8px 16px;">취소</button>
-                  <button onclick="applyPageSetup()" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px;">적용</button>
-              </div>
-          `;
-
-          document.body.appendChild(overlay);
-          document.body.appendChild(modal);
-          showMessage('⚙️ 페이지 설정 열림', 'info');
-      }
-
-      function closePageSetup() {
-          const overlay = document.querySelector('.page-setup-overlay');
-          const modal = document.querySelector('.page-setup-modal');
-          if (overlay) overlay.remove();
-          if (modal) modal.remove();
-      }
-
-      function applyPageSetup() {
-          showMessage('✅ 페이지 설정 적용됨', 'success');
-          closePageSetup();
-      }
-
-      // ============= 파일 작업 기능들 =============
-
-      // 새 통합 문서
-      function newWorkbook() {
-          document.getElementById('app').innerHTML = `
-              <div class="file-info">
-                  <h3>📄 새 통합 문서</h3>
-                  <p>파일명: 새 통합 문서</p>
-                  <p>시트: Sheet1</p>
-              </div>
-              <table class="excel-table editable-table" id="excel-data">
-                  <thead>
-                      <tr>
-                          <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      ${Array.from({length: 20}, (_, i) =>
-                          `<tr>${Array.from({length: 8}, () => '<td contenteditable="true"></td>').join('')}</tr>`
-                      ).join('')}
-                  </tbody>
-              </table>
-          `;
-
-          document.getElementById('excel-toolbar').style.display = 'flex';
-          attachCellEventListeners();
-          showMessage('📄 새 통합 문서가 생성되었습니다', 'success');
-      }
-
-      // 파일 열기
-      function openFile() {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = '.xlsx,.xls,.csv';
-          input.onchange = function(e) {
-              const file = e.target.files[0];
-              if (file) {
-                  const reader = new FileReader();
-                  reader.onload = function(e) {
-                      parseAndDisplayExcel(e.target.result, file.name);
-                  };
-                  reader.readAsArrayBuffer(file);
-                  showMessage(`📁 ${file.name} 파일 로딩 중...`, 'info');
-              }
-          };
-          input.click();
-      }
-
-      // Excel로 저장
-      function downloadExcel() {
-          if (!currentWorkbook) {
-              showMessage('❌ 저장할 데이터가 없습니다', 'error');
-              return;
-          }
-
-          try {
-              const wbout = XLSX.write(currentWorkbook, {
-                  bookType: 'xlsx',
-                  type: 'array'
-              });
-
-              const blob = new Blob([wbout], {type: 'application/octet-stream'});
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = (currentFilename || 'excel_file') + '_edited.xlsx';
-              a.click();
-              URL.revokeObjectURL(url);
-
-              showMessage('💾 Excel 파일로 저장됨', 'success');
-          } catch (error) {
-              console.error('Excel 저장 오류:', error);
-              showMessage('❌ Excel 저장 실패', 'error');
-          }
-      }
-
-      // CSV로 저장
-      function downloadAsCSV() {
-          if (!currentWorkbook) {
-              showMessage('❌ 저장할 데이터가 없습니다', 'error');
-              return;
-          }
-
-          try {
-              const sheetName = currentWorkbook.SheetNames[0];
-              const worksheet = currentWorkbook.Sheets[sheetName];
-              const csv = XLSX.utils.sheet_to_csv(worksheet);
-
-              const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = (currentFilename || 'excel_file') + '.csv';
-              a.click();
-              URL.revokeObjectURL(url);
-
-              showMessage('📊 CSV 파일로 저장됨', 'success');
-          } catch (error) {
-              console.error('CSV 저장 오류:', error);
-              showMessage('❌ CSV 저장 실패', 'error');
-          }
-      }
-
-      // ============= 편집 기능들 =============
-
-      // 전역 변수 (중복 선언 방지)
-      window.undoStack = window.undoStack || [];
-      window.redoStack = window.redoStack || [];
-
-      // 실행 취소
-      function undoAction() {
-          if (window.undoStack.length > 0) {
-              const lastAction = window.undoStack.pop();
-              window.redoStack.push(getCurrentState());
-              restoreState(lastAction);
-              showMessage('↶ 실행 취소됨', 'info');
-          } else {
-              showMessage('↶ 실행 취소할 작업이 없습니다', 'info');
-          }
-      }
-
-      // 다시 실행
-      function redoAction() {
-          if (window.redoStack.length > 0) {
-              const nextAction = window.redoStack.pop();
-              window.undoStack.push(getCurrentState());
-              restoreState(nextAction);
-              showMessage('↷ 다시 실행됨', 'info');
-          } else {
-              showMessage('↷ 다시 실행할 작업이 없습니다', 'info');
-          }
-      }
-
-      // 현재 상태 저장
-      function getCurrentState() {
-          const table = document.querySelector('.excel-table');
-          return table ? table.outerHTML : '';
-      }
-
-      // 상태 복원
-      function restoreState(state) {
-          const container = document.getElementById('app');
-          const fileInfo = container.querySelector('.file-info');
-          container.innerHTML = (fileInfo ? fileInfo.outerHTML : '') + state;
-          attachCellEventListeners();
-      }
-
-      // 복사
-      function copySelection() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              navigator.clipboard.writeText(selectedCell.textContent).then(() => {
-                  showMessage('📋 복사됨', 'success');
-              });
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 붙여넣기
-      function pasteSelection() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              navigator.clipboard.readText().then(text => {
-                  window.undoStack.push(getCurrentState());
-                  selectedCell.textContent = text;
-                  showMessage('📌 붙여넣기 완료', 'success');
-              });
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // 삭제
-      function deleteSelection() {
-          const selectedCell = document.querySelector('.editing-cell');
-          if (selectedCell) {
-              window.undoStack.push(getCurrentState());
-              selectedCell.textContent = '';
-              showMessage('🗑️ 삭제됨', 'success');
-          } else {
-              showMessage('⚠️ 선택된 셀이 없습니다', 'info');
-          }
-      }
-
-      // ============= 완전한 기능들로 모든 요청 대응 =============
-
-  </script>
+    <div id="status">Univer 로딩 중...</div>
+
+    <script>
+        console.log('🚀 Univer Excel 뷰어 시작...');
+
+        // 전역 객체 확인
+        console.log('window.UniverPresets:', typeof window.UniverPresets);
+        console.log('window.UniverCore:', typeof window.UniverCore);
+        console.log('window.UniverPresetSheetsCore:', typeof window.UniverPresetSheetsCore);
+
+        // 여러 방식 시도
+        try {
+            // 방식 1: 직접 window 접근
+            if (window.UniverPresets && window.UniverCore && window.UniverPresetSheetsCore) {
+                const { createUniver } = window.UniverPresets;
+                const { LocaleType } = window.UniverCore;
+                const { UniverSheetsCorePreset } = window.UniverPresetSheetsCore;
+
+                console.log('✅ Univer 객체들 찾음!');
+
+                // Univer 인스턴스 초기화
+                const { univerAPI } = createUniver({
+                    container: 'univer-container',
+                    locale: LocaleType.EN_US,
+                    presets: [UniverSheetsCorePreset()],
+                });
+
+                // 전역 변수로 저장
+                window.univerAPI = univerAPI;
+
+                // 초기 빈 워크북 생성
+                univerAPI.createWorkbook({ name: 'Excel 뷰어' });
+
+                updateStatus('✅ Univer 초기화 완료');
+            } else {
+                throw new Error('Univer 객체를 찾을 수 없습니다');
+            }
+        } catch (error) {
+            console.error('❌ Univer 초기화 실패:', error);
+            updateStatus('❌ Univer 초기화 실패: ' + error.message);
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+            console.log(message);
+        }
+
+        function toBase64(uint8) {
+            let binary = '';
+            const chunk = 0x8000;
+            for (let i = 0; i < uint8.length; i += chunk) {
+                const sub = uint8.subarray(i, i + chunk);
+                binary += String.fromCharCode.apply(null, sub);
+            }
+            return btoa(binary);
+        }
+
+        async function loadExcelFromArrayBuffer(buffer, filename = 'Excel 파일') {
+            try {
+                updateStatus(`📁 ${filename} 로딩 중...`);
+
+                // Univer API를 사용하여 Excel 파일 로드
+                if (!window.univerAPI) {
+                    throw new Error('Univer API를 찾을 수 없습니다.');
+                }
+
+                // ArrayBuffer를 Blob으로 변환
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const file = new File([blob], filename, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+                // Excel 파일을 Univer로 가져오기
+                await window.univerAPI.createWorkbook(file);
+
+                updateStatus(`✅ ${filename} 로딩 완료`);
+
+                // Flutter에 알림
+                if (window.FlutterChannel) {
+                    FlutterChannel.postMessage('loaded:' + filename);
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Excel 로딩 오류:', error);
+                updateStatus(`❌ ${filename} 로딩 실패: ${error.message}`);
+
+                if (window.FlutterChannel) {
+                    FlutterChannel.postMessage('error:' + error.message);
+                }
+
+                return false;
+            }
+        }
+
+        async function loadAsset(path) {
+            try {
+                updateStatus(`🔄 ${path} 가져오는 중...`);
+
+                const response = await fetch(path);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${path}를 찾을 수 없습니다`);
+                }
+
+                const buffer = await response.arrayBuffer();
+                const filename = path.split('/').pop();
+
+                return await loadExcelFromArrayBuffer(buffer, filename);
+            } catch (error) {
+                console.error('Asset 로딩 오류:', error);
+                updateStatus(`❌ Asset 로딩 실패: ${error.message}`);
+                return false;
+            }
+        }
+
+        async function getXlsxBytes() {
+            try {
+                // Univer API를 사용하여 Excel 내보내기
+                if (!window.univerAPI) {
+                    throw new Error('Univer API를 찾을 수 없습니다');
+                }
+
+                // 현재 활성 워크북을 Excel로 내보내기
+                const blob = await window.univerAPI.exportWorkbook('xlsx');
+                const arrayBuffer = await blob.arrayBuffer();
+                return new Uint8Array(arrayBuffer);
+            } catch (error) {
+                console.error('Excel 내보내기 오류:', error);
+                throw new Error('Excel 내보내기 실패: ' + error.message);
+            }
+        }
+
+        async function exportXlsx() {
+            try {
+                updateStatus('💾 Excel 저장 중...');
+
+                const bytes = await getXlsxBytes();
+                const b64 = toBase64(bytes);
+
+                if (window.FlutterChannel) {
+                    FlutterChannel.postMessage('download:xlsx:' + b64);
+                } else {
+                    // 브라우저에서 직접 다운로드
+                    const blob = new Blob([bytes], {
+                        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'export.xlsx';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                }
+
+                updateStatus('✅ Excel 저장 완료');
+            } catch (error) {
+                console.error('Excel 저장 오류:', error);
+                updateStatus(`❌ Excel 저장 실패: ${error.message}`);
+
+                if (window.FlutterChannel) {
+                    FlutterChannel.postMessage('error:' + error.message);
+                }
+            }
+        }
+
+        function triggerFilePicker() {
+            const input = document.getElementById('fileInput');
+            input.value = '';
+            input.click();
+        }
+
+        // 파일 선택 이벤트
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+
+            const buffer = await file.arrayBuffer();
+            await loadExcelFromArrayBuffer(buffer, file.name);
+        });
+
+        // Flutter ↔ WebView 메시지 브리지
+        window.addEventListener('message', async (event) => {
+            const { action, data } = event.data || {};
+
+            if (action === 'triggerFilePicker') {
+                return triggerFilePicker();
+            }
+            if (action === 'exportXlsx') {
+                return exportXlsx();
+            }
+            if (action === 'loadExcelAsset' && data && data.path) {
+                return loadAsset(data.path);
+            }
+            if (action === 'getXlsxBase64') {
+                try {
+                    const bytes = await getXlsxBytes();
+                    const b64 = toBase64(bytes);
+                    if (window.FlutterChannel) {
+                        FlutterChannel.postMessage('return:xlsx:' + b64);
+                    }
+                } catch (error) {
+                    if (window.FlutterChannel) {
+                        FlutterChannel.postMessage('error:' + error.message);
+                    }
+                }
+            }
+        });
+
+        // Flutter 준비 완료 알림
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage('univer_ready', '*');
+        }
+
+        console.log('✅ Univer Excel 뷰어 준비 완료');
+    </script>
 </body>
 </html>

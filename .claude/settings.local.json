@@ -142,7 +142,10 @@
       "Bash(do mv \"$f\" \"_disabled_$f\")",
       "Bash(done)",
       "WebFetch(domain:chatgpt.com)",
-      "Read(//c/Users/IT/Downloads/**)"
+      "Read(//c/Users/IT/Downloads/**)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:univer.ai)",
+      "WebFetch(domain:docs.univer.ai)"
     ],
     "deny": []
   }
