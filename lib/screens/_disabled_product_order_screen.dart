@@ -9,7 +9,6 @@ import '../providers/auth_provider.dart';
 import '../providers/favorites_provider.dart';
 import '../utils/order_report_generator.dart';
 import '../services/invoice_service.dart';
-import 'package:flutter/foundation.dart';
 import '../config/app_config.dart';
 
 class ProductOrderScreen extends StatefulWidget {
@@ -187,6 +186,24 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
     super.dispose();
   }
 
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoading && _hasMore) {
+        _fetchItems();
+      }
+    }
+  }
+
+  Future<void> _fetchRecentOrders() async {
+    // Recent orders functionality can be implemented here
+    debugPrint('_fetchRecentOrders called');
+  }
+
+  Future<void> _fetchOrderHistory() async {
+    // Order history functionality can be implemented here
+    debugPrint('_fetchOrderHistory called');
+  }
+
   Future<void> _fetchTrades() async {
     if (!mounted || _userInfo == null) return;
 
@@ -294,7 +311,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
     if (trCd == null) {
       debugPrint('Error: MEK_TR_CD missing in userInfo: $_userInfo');
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('사용자 정보가 없습니다. 다시 로그인해주세요.')),
         );
       }
@@ -350,7 +367,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
       } else {
         debugPrint('_fetchItems - API 오류: ${response.statusCode} - ${response.body}');
         if (mounted) {
-          if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('품목 조회 실패: 서버와 연결할 수 없습니다.')),
           );
         }
@@ -358,7 +375,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
     } catch (e) {
       debugPrint('_fetchItems - 예외 발생: $e');
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('품목 조회 오류: 네트워크를 확인해주세요.')),
         );
       }
@@ -385,7 +402,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
     if (trCd == null) {
       debugPrint('Error: MEK_TR_CD missing in userInfo: ${_authProvider!.userInfo}');
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('사용자 정보가 없습니다. 다시 로그인해주세요.')),
         );
       }
@@ -413,7 +430,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
         }
       } else {
         if (mounted) {
-          if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('최근 주문 조회 실패: 서버와 연결할 수 없습니다.')),
           );
         }
@@ -421,7 +438,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
     } catch (e) {
       debugPrint('fetchRecentOrders: Error $e');
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('최근 주문 조회 오류: 네트워크를 확인해주세요.')),
         );
       }
@@ -433,7 +450,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
     if (_authProvider!.userInfo?['MEK_TR_CD'] == null) {
       debugPrint('Error: trCd missing in userInfo');
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('사용자 정보가 없습니다. 다시 로그인해주세요.')),
         );
       }
@@ -457,7 +474,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
         }
       } else {
         if (mounted) {
-          if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('주문 내역 조회 실패: 서버와 연결할 수 없습니다.')),
           );
         }
@@ -465,7 +482,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
     } catch (e) {
       debugPrint('fetchOrderHistory: Error $e');
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('주문 내역 조회 오류: 네트워크를 확인해주세요.')),
         );
       }
@@ -475,7 +492,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
   Future<void> submitOrder() async {
     if (_cart.isEmpty) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('장바구니가 비어 있습니다.')),
         );
       }
@@ -485,7 +502,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
     if (_userInfo?['MEK_TR_CD'] == null) {
       debugPrint('Error: trCd missing in userInfo');
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('사용자 정보가 없습니다. 다시 로그인해주세요.')),
         );
       }
@@ -495,7 +512,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
     final effectiveTrCd = _selectedTradeCode ?? _userInfo!['trCd'];
     if (_userInfo!['MEK_TR_CD'] == 'MEK' && _selectedTradeCode == null) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('거래처를 선택해주세요.')),
         );
       }
@@ -516,7 +533,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
 
     if (validCart.isEmpty) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('유효한 주문 항목이 없습니다. 품번과 수량이 올바른 항목을 추가해주세요.')),
         );
       }
@@ -558,7 +575,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
       debugPrint('submitOrder: Status ${response.statusCode} - ${response.body}');
       if (response.statusCode == 200) {
         if (mounted) {
-          if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('주문이 완료되었습니다.')),
           );
           setState(() {
@@ -576,7 +593,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
           errorMessage = '서버 응답 파싱 실패: ${response.statusCode}';
         }
         if (mounted) {
-          if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(errorMessage)),
           );
         }
@@ -584,7 +601,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
     } catch (e) {
       debugPrint('submitOrder: Error $e');
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('주문 오류: $e')),
         );
       }
@@ -685,7 +702,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
                 addToCart(item, quantity);
                 Navigator.pop(context);
                 if (mounted) {
-                  if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('${item['품명']} $quantity개가 장바구니에 추가되었습니다.'),
                       duration: const Duration(seconds: 2),
@@ -694,7 +711,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
                 }
               } else {
                 if (mounted) {
-                  if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('수량을 올바르게 입력해주세요.')),
                   );
                 }
@@ -1132,7 +1149,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
   Future<void> previewOrderDocument() async {
     if (_cart.isEmpty) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('장바구니가 비어 있습니다.')),
         );
       }
@@ -1158,7 +1175,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
       await OrderReportGenerator.previewPDF(pdfData);
     } catch (e) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('미리보기 오류: $e')),
         );
       }
@@ -1168,7 +1185,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
   Future<void> exportToPDF() async {
     if (_cart.isEmpty) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('장바구니가 비어 있습니다.')),
         );
       }
@@ -1198,13 +1215,13 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
       );
 
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('PDF 주문서가 생성되었습니다.')),
         );
       }
     } catch (e) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('PDF 생성 오류: $e')),
         );
       }
@@ -1214,7 +1231,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
   Future<void> exportToExcel() async {
     if (_cart.isEmpty) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('장바구니가 비어 있습니다.')),
         );
       }
@@ -1238,13 +1255,13 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
       );
 
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Excel 주문서가 생성되었습니다: $filePath')),
         );
       }
     } catch (e) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Excel 생성 오류: $e')),
         );
       }
@@ -1254,7 +1271,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
   Future<void> generateQuote() async {
     if (_cart.isEmpty) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('장바구니가 비어 있습니다.')),
         );
       }
@@ -1313,7 +1330,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
         await OrderReportGenerator.previewPDF(pdfData);
 
         if (mounted) {
-          if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('PDF 견적서가 생성되었습니다.')),
           );
         }
@@ -1328,14 +1345,14 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
         );
 
         if (mounted) {
-          if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Excel 견적서가 생성되었습니다: $filePath')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('견적서 생성 오류: $e')),
         );
       }
@@ -1608,7 +1625,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
                                             });
                                             // 거래처 선택 완료 메시지
                                             if (mounted) {
-                                              if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+                                              ScaffoldMessenger.of(context).showSnackBar(
                                                 SnackBar(
                                                   content: Text('${trade['TR_NM']} 거래처가 선택되었습니다.'),
                                                   duration: const Duration(seconds: 1),
@@ -2091,7 +2108,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
   Future<void> generateProformaInvoice() async {
     if (_cart.isEmpty) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('장바구니가 비어 있습니다.')),
         );
       }
@@ -2121,14 +2138,14 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
       */
 
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Invoice 기능이 임시로 비활성화되었습니다. Syncfusion으로 교체 예정입니다.')),
         );
       }
     } catch (e) {
       debugPrint('Proforma Invoice 생성 오류: $e');
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Proforma Invoice 생성 오류: $e')),
         );
       }
@@ -2139,7 +2156,7 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
   Future<void> generateCommercialInvoice() async {
     if (_cart.isEmpty) {
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('장바구니가 비어 있습니다.')),
         );
       }
@@ -2171,17 +2188,82 @@ class ProductOrderScreenState extends State<ProductOrderScreen> {
       */
 
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Invoice 기능이 임시로 비활성화되었습니다. Syncfusion으로 교체 예정입니다.')),
         );
       }
     } catch (e) {
       debugPrint('Commercial Invoice 생성 오류: $e');
       if (mounted) {
-        if (_scaffoldMessenger != null) {\n          try {\n            scaffoldMessenger!.showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Commercial Invoice 생성 오류: $e')),
         );
       }
+    }
+  }
+
+  Future<void> _exportToPDF() async {
+    try {
+      debugPrint('PDF export functionality');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PDF 내보내기 기능은 개발 중입니다')),
+        );
+      }
+    } catch (e) {
+      debugPrint('PDF export error: $e');
+    }
+  }
+
+  Future<void> _exportToExcel() async {
+    try {
+      debugPrint('Excel export functionality');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Excel 내보내기 기능은 개발 중입니다')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Excel export error: $e');
+    }
+  }
+
+  Future<void> _generateQuote() async {
+    try {
+      debugPrint('Quote generation functionality');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('견적서 생성 기능은 개발 중입니다')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Quote generation error: $e');
+    }
+  }
+
+  Future<void> _generateProformaInvoice() async {
+    try {
+      debugPrint('Proforma Invoice generation functionality');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Proforma Invoice 생성 기능은 개발 중입니다')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Proforma Invoice generation error: $e');
+    }
+  }
+
+  Future<void> _generateCommercialInvoice() async {
+    try {
+      debugPrint('Commercial Invoice generation functionality');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Commercial Invoice 생성 기능은 개발 중입니다')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Commercial Invoice generation error: $e');
     }
   }
 }

@@ -1,0 +1,46 @@
+// Flutter Web CORS 설정
+console.log('🌐 Flutter Web CORS 설정 시작');
+
+// XMLHttpRequest 인터셉터 (Flutter의 dio package가 사용)
+(function() {
+  const originalXHROpen = XMLHttpRequest.prototype.open;
+  const originalXHRSend = XMLHttpRequest.prototype.send;
+
+  XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+    console.log('🔄 XHR Open:', method, url);
+
+    // nginx proxy 사용으로 URL 변환
+    if (url.includes('localhost:4100') || url.includes('/api/v1/')) {
+      const newUrl = url.replace('localhost:4100', 'localhost/msm').replace(/\/api\/v1\//, '/api/v1/');
+      console.log('🌐 URL 변환:', url, '->', newUrl);
+      url = newUrl;
+    }
+
+    this._method = method;
+    this._url = url;
+
+    return originalXHROpen.call(this, method, url, async, user, password);
+  };
+
+  XMLHttpRequest.prototype.send = function(data) {
+    console.log('🚀 XHR Send:', this._method, this._url);
+    console.log('📝 Request Data:', data);
+
+    // CORS 헤더 설정
+    this.setRequestHeader('Content-Type', 'application/json');
+    this.setRequestHeader('Accept', 'application/json');
+
+    // 응답 처리
+    this.addEventListener('load', function() {
+      console.log('✅ XHR Response:', this.status, this.responseText);
+    });
+
+    this.addEventListener('error', function() {
+      console.log('❌ XHR Error:', this.status, this.statusText);
+    });
+
+    return originalXHRSend.call(this, data);
+  };
+})();
+
+console.log('✅ Flutter Web CORS 설정 완료');

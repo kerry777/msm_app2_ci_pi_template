@@ -1,38 +1,36 @@
 import 'package:flutter/material.dart';
-import 'univer_excel_viewer_screen.dart';
+import 'simple_univer_test_screen.dart';
 
-class ExcelQuotationScreen extends StatelessWidget {
-  const ExcelQuotationScreen({super.key});
+class TestUniverScreen extends StatelessWidget {
+  const TestUniverScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Excel 견적서 편집기'),
+        title: const Text('Univer 테스트'),
         backgroundColor: Colors.blue[600],
         foregroundColor: Colors.white,
-        elevation: 2,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 헤더 카드
+            // 제목
             Card(
-              elevation: 4,
               child: Padding(
-                padding: const EdgeInsets.all(20.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
                     Icon(
-                      Icons.description,
+                      Icons.table_chart,
                       size: 48,
                       color: Colors.blue[600],
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Excel 견적서 템플릿',
+                      'Univer Excel 뷰어 테스트',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: Colors.blue[700],
@@ -40,7 +38,7 @@ class ExcelQuotationScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Univer 엔진으로 원본 Excel 스타일을 유지하며 편집',
+                      'WebView를 통한 Univer 스프레드시트 엔진 통합',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Colors.grey[600],
                           ),
@@ -53,9 +51,9 @@ class ExcelQuotationScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // 템플릿 선택 버튼들
+            // 테스트 버튼들
             const Text(
-              '견적서 템플릿 선택',
+              '테스트 옵션',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -63,45 +61,18 @@ class ExcelQuotationScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // 한국어 견적서
+            // 기본 Univer 테스트
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const UniverExcelViewerScreen(
-                      title: '한국어 견적서',
-                      excelFilePath: 'assets/excel_templates/quotation_kr.xlsx',
-                    ),
+                    builder: (context) => const SimpleUniverTestScreen(),
                   ),
                 );
               },
-              icon: const Icon(Icons.description),
-              label: const Text('한국어 견적서 템플릿'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[600],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.all(16),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // PI (Proforma Invoice)
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const UniverExcelViewerScreen(
-                      title: 'PI (Proforma Invoice)',
-                      excelFilePath: 'assets/excel_templates/pi_template.xlsx',
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.receipt_long),
-              label: const Text('PI (Proforma Invoice) 템플릿'),
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('기본 Univer 테스트 (간단)'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green[600],
                 foregroundColor: Colors.white,
@@ -111,21 +82,39 @@ class ExcelQuotationScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // Packing List
+            // 견적서 템플릿 테스트
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const UniverExcelViewerScreen(
-                      title: 'Packing List',
-                      excelFilePath: 'assets/excel_templates/packing_list.xlsx',
-                    ),
+                    builder: (context) => const SimpleUniverTestScreen(),
                   ),
                 );
               },
-              icon: const Icon(Icons.inventory),
-              label: const Text('Packing List 템플릿'),
+              icon: const Icon(Icons.description),
+              label: const Text('견적서 템플릿 로드 테스트'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[600],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.all(16),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // PI 템플릿 테스트
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SimpleUniverTestScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.receipt_long),
+              label: const Text('PI 템플릿 로드 테스트'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange[600],
                 foregroundColor: Colors.white,
@@ -135,21 +124,18 @@ class ExcelQuotationScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // Commercial Invoice
+            // 발주서 템플릿 테스트
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const UniverExcelViewerScreen(
-                      title: 'Commercial Invoice',
-                      excelFilePath: 'assets/excel_templates/commercial_invoice.xlsx',
-                    ),
+                    builder: (context) => const SimpleUniverTestScreen(),
                   ),
                 );
               },
-              icon: const Icon(Icons.article),
-              label: const Text('Commercial Invoice 템플릿'),
+              icon: const Icon(Icons.shopping_cart),
+              label: const Text('발주서 템플릿 로드 테스트'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.purple[600],
                 foregroundColor: Colors.white,
@@ -159,7 +145,7 @@ class ExcelQuotationScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
-            // 기능 안내
+            // 정보 카드
             Card(
               color: Colors.grey[50],
               child: Padding(
@@ -172,17 +158,17 @@ class ExcelQuotationScreen extends StatelessWidget {
                         Icon(Icons.info, color: Colors.blue[600]),
                         const SizedBox(width: 8),
                         const Text(
-                          '기능 안내',
+                          '테스트 정보',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    const Text('• 원본 Excel 스타일 및 수식 완벽 유지'),
-                    const Text('• 실시간 편집 및 계산'),
-                    const Text('• PDF 내보내기 지원'),
-                    const Text('• 병합된 셀과 서식 보존'),
-                    const Text('• 웹 브라우저에서 Excel과 동일한 경험'),
+                    const Text('• Univer WebView 통합 상태 확인'),
+                    const Text('• CDN 라이브러리 로딩 테스트'),
+                    const Text('• Flutter ↔ JavaScript 메시지 브릿지'),
+                    const Text('• Excel 파일 로드 및 렌더링'),
+                    const Text('• PDF 내보내기 기능'),
                   ],
                 ),
               ),

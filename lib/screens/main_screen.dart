@@ -53,6 +53,7 @@ import 'product_analytics_screen.dart';
 // import 'enhanced_analytics_screen.dart';
 // import 'enhanced_analytics_with_context_menu_screen.dart';
 import 'excel_quotation_screen.dart';
+import 'univer_template_editor_screen.dart';
 
 // === 🚀 새로운 Power BI 수준 기능들 ===
 import 'advanced_bi_drilldown_screen.dart';
@@ -322,17 +323,17 @@ class _MainScreenState extends State<MainScreen> {
         return const QuoteManagementScreen();
 
       case 'excel_template_viewer':
-        return const EJ2SpreadsheetScreen(); // Use EJ2 Spreadsheet instead
+        return const UniverTemplateEditorScreen(); // Use Univer Template Editor instead
       case 'syncfusion_excel_viewer':
-        return const EJ2SpreadsheetScreen(); // Use EJ2 Spreadsheet instead  
+        return const UniverTemplateEditorScreen(); // Use Univer Template Editor instead  
       case 'excel_quotation':
         return const ExcelQuotationScreen(); // Excel 견적서 편집기
       case 'ej2_spreadsheet':
-        return const EJ2SpreadsheetScreen(); // EJ2 Spreadsheet 스크린
+        return const UniverTemplateEditorScreen(); // Univer Template Editor (Main)
       case 'ej2_spreadsheet_debug':
         return const EJ2SpreadsheetDebugScreen(); // EJ2 Spreadsheet 디버그 스크린
       case 'ej2_spreadsheet_simple':
-        return const EJ2SpreadsheetSimpleScreen(); // EJ2 Spreadsheet 간단한 스크린
+        return const UniverTemplateEditorScreen(isSimple: true); // Univer Template Editor (Simple)
 
       // SPA 시스템 관련
       case 'analytics_spa':

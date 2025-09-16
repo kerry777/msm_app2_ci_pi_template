@@ -134,7 +134,15 @@
       "Bash(\"taskkill\" \"/F\" \"/IM\" \"chrome.exe\")",
       "Bash(clip)",
       "Bash(git rm:*)",
-      "Bash(shutdown:*)"
+      "Bash(shutdown:*)",
+      "Bash(git gc:*)",
+      "Bash(r)",
+      "Bash(\"taskkill\" \"/F\" \"/IM\" \"dart.exe\")",
+      "Bash(for f in excel_service.dart excel_service_io.dart excel_service_web.dart excel_utils.dart)",
+      "Bash(do mv \"$f\" \"_disabled_$f\")",
+      "Bash(done)",
+      "WebFetch(domain:chatgpt.com)",
+      "Read(//c/Users/IT/Downloads/**)"
     ],
     "deny": []
   }

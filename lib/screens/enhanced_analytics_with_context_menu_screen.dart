@@ -110,6 +110,7 @@ class _ContextMenuChartState extends State<ContextMenuChart> {
       items: [
         // 차트 타입 변경 메뉴
         PopupMenuItem(
+          value: 'chart_type',
           child: const Row(
             children: [
               Icon(Icons.bar_chart, size: 20),
@@ -328,7 +329,7 @@ class _ContextMenuChartState extends State<ContextMenuChart> {
   String _formatNumber(double value, DisplayNumberFormat format) {
     switch (format) {
       case DisplayNumberFormat.original:
-        return intl.NumberFormat.currency(
+        return NumberFormat.currency(
           locale: 'ko_KR',
           symbol: '₩',
           decimalDigits: 0
@@ -336,15 +337,15 @@ class _ContextMenuChartState extends State<ContextMenuChart> {
 
       case DisplayNumberFormat.thousand:
         final kValue = value / 1000;
-        return '${intl.NumberFormat('#,##0.0').format(kValue)}K';
+        return '${NumberFormat('#,##0.0').format(kValue)}K';
 
       case DisplayNumberFormat.million:
         final mValue = value / 1000000;
-        return '${intl.NumberFormat('#,##0.0').format(mValue)}M';
+        return '${NumberFormat('#,##0.0').format(mValue)}M';
 
       case DisplayNumberFormat.hundredMillion:
         final hundredMillionValue = value / 100000000;
-        return '${intl.NumberFormat('#,##0.0').format(hundredMillionValue)}억';
+        return '${NumberFormat('#,##0.0').format(hundredMillionValue)}억';
     }
   }
 

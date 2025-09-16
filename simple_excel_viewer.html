@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple Excel Viewer</title>
+  <style>
+    :root { 
+      --bg: #0b0c10; --card:#121319; --text:#e6e6e6; --muted:#9aa3af; --accent:#3b82f6; 
+      --border:#1f2230; --table:#0f1117;
+    }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', '맑은 고딕', sans-serif; }
+    .wrap { max-width: 1200px; margin: 24px auto; padding: 16px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    h1 { font-size: 20px; margin: 0 0 10px; display:flex; gap:8px; align-items:center; }
+    .bar { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin: 8px 0 16px; }
+    .bar input[type="text"] { flex:1; min-width: 220px; background:#0d0f15; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+    .btn { background:var(--accent); color:white; border:none; border-radius:10px; padding:10px 14px; cursor:pointer; font-weight:600; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    select { background:#0d0f15; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+    .muted { color:var(--muted); font-size: 12px; }
+    .dropzone { border:1px dashed #384152; border-radius:14px; padding:12px; text-align:center; background:#0d0f15; }
+    table { border-collapse: collapse; width:100%; background:var(--table); border:1px solid var(--border); }
+    th, td { border:1px solid var(--border); padding:8px 10px; vertical-align:top; }
+    th { background:#121827; position: sticky; top: 0; z-index: 1; }
+    .table-wrap { max-height: 70vh; overflow:auto; border-radius:12px; }
+    .badge { display:inline-flex; align-items:center; gap:6px; font-size:12px; background:#0f172a; border:1px solid var(--border); color:var(--muted); padding:6px 10px; border-radius:999px; }
+    .hidden { display:none; }
+    a { color:#9cc0ff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>📊 Simple Excel Viewer</h1>
+      <div class="bar">
+        <input id="fileInputText" type="text" placeholder="예: assets/MEK_SALES_TEMPLATE_QT_KR.xlsx" value="assets/MEK_SALES_TEMPLATE_QT_KR.xlsx" />
+        <button id="btnLoad" class="btn">불러오기</button>
+        <label class="badge">
+          <input id="chkHeaders" type="checkbox" checked style="accent-color:#3b82f6;" />
+          1행을 헤더로 사용
+        </label>
+        <select id="sheetSelect" disabled></select>
+        <a id="aRawDownload" class="badge hidden" download>원본 다운로드</a>
+        <span id="status" class="muted"></span>
+      </div>
+
+      <div class="dropzone" id="drop">
+        로컬 파일을 여기로 끌어놓거나 파일을 선택하세요.
+        <input id="filePicker" type="file" accept=".xlsx,.xls,.csv" style="display:block; margin:8px auto 0;" />
+        <div class="muted">URL 파라미터로도 지원: <code>?file=assets/MEK_SALES_TEMPLATE_QT_KR.xlsx</code></div>
+      </div>
+
+      <div class="table-wrap" id="tableWrap">
+        <!-- table will be injected here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- SheetJS (Community) via CDN -->
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    const $ = (sel)=>document.querySelector(sel);
+    const fileInputText = $("#fileInputText");
+    const btnLoad = $("#btnLoad");
+    const sheetSelect = $("#sheetSelect");
+    const chkHeaders = $("#chkHeaders");
+    const statusEl = $("#status");
+    const tableWrap = $("#tableWrap");
+    const filePicker = $("#filePicker");
+    const dropzone = $("#drop");
+    const aRawDownload = $("#aRawDownload");
+
+    let workbook = null;
+    let currentFileBytes = null;
+    let currentFileName = null;
+
+    function setStatus(msg) { statusEl.textContent = msg || ""; }
+    function setSheets(names){
+      sheetSelect.innerHTML = "";
+      names.forEach((nm, i)=>{
+        const opt = document.createElement("option");
+        opt.value = nm; opt.textContent = `${i+1}. ${nm}`;
+        sheetSelect.appendChild(opt);
+      });
+      sheetSelect.disabled = names.length === 0;
+    }
+    function getQueryParam(name) {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+    function renderSheet(name) {
+      if (!workbook) return;
+      const ws = workbook.Sheets[name];
+      if (!ws) return;
+      const useHeader = chkHeaders.checked;
+      // Convert sheet to HTML with or without headers
+      const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
+      let html = "";
+      if (useHeader) {
+        // Use the first row as header
+        const data = XLSX.utils.sheet_to_json(ws, { header:1, defval:"" });
+        if (data.length === 0) {
+          tableWrap.innerHTML = "<div class='muted'>빈 시트입니다.</div>";
+          return;
+        }
+        const [header, ...rows] = data;
+        html += "<table><thead><tr>";
+        header.forEach(h=> html += `<th>${escapeHtml(String(h))}</th>`);
+        html += "</tr></thead><tbody>";
+        rows.forEach(r=>{
+          html += "<tr>";
+          for (let i=0;i<header.length;i++) {
+            html += `<td>${escapeHtml(String(r[i] ?? ""))}</td>`;
+          }
+          html += "</tr>";
+        });
+        html += "</tbody></table>";
+      } else {
+        // No header mode: just render the raw grid
+        const data = XLSX.utils.sheet_to_json(ws, { header:1, defval:"" });
+        html += "<table><tbody>";
+        data.forEach(row=>{
+          html += "<tr>";
+          row.forEach(cell=>{
+            html += `<td>${escapeHtml(String(cell))}</td>`;
+          });
+          html += "</tr>";
+        });
+        html += "</tbody></table>";
+      }
+      tableWrap.innerHTML = html;
+    }
+    function escapeHtml(str){
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+    async function loadFromUrl(urlPath) {
+      setStatus("파일 불러오는 중...");
+      try {
+        const res = await fetch(urlPath);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const buf = await res.arrayBuffer();
+        currentFileBytes = new Uint8Array(buf);
+        currentFileName = decodeURIComponent(urlPath.split("/").pop() || "workbook.xlsx");
+        workbook = XLSX.read(buf, { type: "array" });
+        const names = workbook.SheetNames || [];
+        setSheets(names);
+        if (names.length) {
+          sheetSelect.value = names[0];
+          renderSheet(names[0]);
+        }
+        aRawDownload.classList.remove("hidden");
+        const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        aRawDownload.href = URL.createObjectURL(blob);
+        aRawDownload.textContent = "원본 다운로드";
+        aRawDownload.download = currentFileName;
+        setStatus(`불러오기 완료: ${currentFileName} (시트 ${names.length}개)`);
+      } catch (err) {
+        console.error(err);
+        let errorMsg = "불러오기 실패: " + err.message;
+        if (err.message.includes("HTTP 404")) {
+          errorMsg += " - 파일이 존재하지 않습니다. 경로를 확인하세요.";
+        } else if (err.message.includes("Failed to fetch")) {
+          errorMsg += " - CORS 정책으로 인해 접근할 수 없습니다. 웹 서버를 통해 접근하세요.";
+        }
+        setStatus(errorMsg);
+      }
+    }
+    async function loadFromFile(file) {
+      setStatus("로컬 파일 읽는 중...");
+      currentFileName = file.name;
+      const buf = await file.arrayBuffer();
+      currentFileBytes = new Uint8Array(buf);
+      workbook = XLSX.read(buf, { type: "array" });
+      const names = workbook.SheetNames || [];
+      setSheets(names);
+      if (names.length) {
+        sheetSelect.value = names[0];
+        renderSheet(names[0]);
+      }
+      const blob = new Blob([buf], { type: file.type || "application/octet-stream" });
+      aRawDownload.classList.remove("hidden");
+      aRawDownload.href = URL.createObjectURL(blob);
+      aRawDownload.textContent = "원본 다운로드";
+      aRawDownload.download = currentFileName;
+      setStatus(`로컬 파일 로드 완료: ${currentFileName} (시트 ${names.length}개)`);
+    }
+
+    // Events
+    btnLoad.addEventListener("click", () => {
+      const p = fileInputText.value.trim();
+      if (!p) return;
+      loadFromUrl(p);
+      // Update URL (nice UX)
+      const url = new URL(window.location.href);
+      url.searchParams.set("file", p);
+      history.replaceState({}, "", url);
+    });
+    sheetSelect.addEventListener("change", ()=> renderSheet(sheetSelect.value));
+    chkHeaders.addEventListener("change", ()=> renderSheet(sheetSelect.value));
+
+    // Drag & Drop
+    ;["dragenter","dragover"].forEach(evt=> dropzone.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); dropzone.style.opacity = "0.8"; }));
+    ;["dragleave","drop"].forEach(evt=> dropzone.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); dropzone.style.opacity = "1"; }));
+    dropzone.addEventListener("drop", async (e)=>{
+      const file = e.dataTransfer.files?.[0];
+      if (file) await loadFromFile(file);
+    });
+    filePicker.addEventListener("change", async (e)=>{
+      const file = e.target.files?.[0];
+      if (file) await loadFromFile(file);
+    });
+
+    // Init from query param
+    (function init(){
+      const q = getQueryParam("file");
+      if (q) {
+        fileInputText.value = q;
+        loadFromUrl(q);
+      } else {
+        setStatus("파일 경로를 입력하거나 끌어놓으세요.");
+      }
+    })();
+  </script>
+</body>
+</html>
