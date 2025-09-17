@@ -163,7 +163,10 @@
       "Bash(start http://localhost:50570/univer_final_solution.html)",
       "Bash(start http://localhost:50570/univer_working_with_cache_busting.html)",
       "Bash(start http://localhost:50570/univer_excel_viewer_complete.html)",
-      "Bash(start http://localhost:50570/univer_simple_with_cache.html)"
+      "Bash(start http://localhost:50570/univer_simple_with_cache.html)",
+      "Bash(start http://localhost:50570/univer_minimal_test.html)",
+      "Bash(start http://localhost:50570/univer_debug_step_by_step.html)",
+      "Bash(start http://localhost:50570/univer_working_version_test.html)"
     ],
     "deny": []
   }
