@@ -145,7 +145,13 @@
       "Read(//c/Users/IT/Downloads/**)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:univer.ai)",
-      "WebFetch(domain:docs.univer.ai)"
+      "WebFetch(domain:docs.univer.ai)",
+      "Bash(start http://localhost/msm/univer_excel_viewer_complete.html)",
+      "WebFetch(domain:cdn.sheetjs.com)",
+      "Bash(start http://localhost/msm/univer_final_solution.html)",
+      "Bash(start http://localhost:50570/excel_viewer_working.html)",
+      "Bash(start http://localhost:50570/univer_working_solution.html)",
+      "Bash(start http://localhost:50570/univer_working_solution_fixed.html)"
     ],
     "deny": []
   }

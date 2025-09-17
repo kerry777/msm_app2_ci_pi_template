@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Univer Excel 뷰어 (값-only 임포트/익스포트)</title>
+
+  <!-- Required deps for Univer Preset Mode (CDN UMD) -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/rxjs/dist/bundles/rxjs.umd.min.js"></script>
+  <script src="https://unpkg.com/echarts@5.6.0/dist/echarts.min.js"></script>
+
+  <!-- Univer Preset (Sheets Core) -->
+  <script src="https://unpkg.com/@univerjs/presets/lib/umd/index.js"></script>
+  <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/index.js"></script>
+  <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/locales/en-US.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core/lib/index.css"/>
+
+  <!-- SheetJS (값-only 임포트/익스포트용) -->
+  <script src="https://unpkg.com/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
+
+  <style>
+    html, body { height: 100%; margin: 0; }
+    #univer-container { position: absolute; inset: 0; }
+    #toolbar {
+      position: fixed; top: 8px; left: 8px; z-index: 10;
+      background: rgba(255,255,255,0.92); backdrop-filter: blur(4px);
+      border: 1px solid #ddd; border-radius: 12px; padding: 8px 10px;
+      display: flex; gap: 6px; align-items: center;
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
+      font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, 'Apple SD Gothic Neo', 'Malgun Gothic', '맑은 고딕', 'Noto Sans KR', 'Helvetica Neue', sans-serif;
+    }
+    #status { position: fixed; bottom: 10px; right: 12px; padding: 6px 10px; background: #111; color: #fff; border-radius: 8px; font-size: 12px; opacity: .9; }
+    button { padding: 6px 10px; border-radius: 8px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+    button:hover { background: #f6f6f6; }
+    input[type=file] { display: none; }
+    .note { font-size: 12px; color: #666; margin-left: 6px; }
+  </style>
+</head>
+<body>
+  <div id="univer-container"></div>
+
+  <div id="toolbar">
+    <button id="btn-new">🆕 새 시트</button>
+    <button id="btn-open">📁 XLSX 열기 (값-only)</button>
+    <button id="btn-save">💾 XLSX 저장 (값-only)</button>
+    <span class="note">※ 스타일/서식 보존형 임포트·익스포트는 <b>서버</b>가 필요합니다.</span>
+    <input id="fileInput" type="file" accept=".xlsx"/>
+  </div>
+
+  <div id="status">Univer 로딩 중…</div>
+
+  <script>
+    // Univer Preset Mode (정식 문서 예제와 동일한 전역 네임스페이스 사용)
+    // docs: https://docs.univer.ai/guides/sheets/getting-started/installation/cdn
+    const { createUniver } = UniverPresets;
+    const { LocaleType, mergeLocales } = UniverCore;
+    const { UniverSheetsCorePreset } = UniverPresetSheetsCore;
+
+    const { univer, univerAPI } = createUniver({
+      locale: LocaleType.EN_US,
+      locales: { [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS) },
+      presets: [UniverSheetsCorePreset({ container: 'univer-container' })],
+    });
+
+    window.univerAPI = univerAPI;
+
+    // 최초 빈 워크북 생성
+    univerAPI.createWorkbook({ name: 'Excel Viewer' });
+
+    const $status = document.getElementById('status');
+    function setStatus(msg) { $status.textContent = msg; }
+
+    // 파일 열기
+    document.getElementById('btn-open').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
+
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        await importXlsxValuesOnly(file);
+        setStatus('✅ 불러오기 완료(값-only): ' + file.name);
+      } catch (err) {
+        console.error(err);
+        setStatus('❌ 불러오기 실패: ' + err.message);
+        alert('불러오기 실패: ' + err.message + '\n\n스타일/수식 보존 임포트는 서버 구성이 필요합니다.');
+      } finally {
+        e.target.value = '';
+      }
+    });
+
+    // 새 시트
+    document.getElementById('btn-new').addEventListener('click', () => {
+      univerAPI.createWorkbook({ name: 'New Sheet ' + new Date().toLocaleTimeString() });
+      setStatus('🆕 새 워크북 생성');
+    });
+
+    // 값-only 임포트: SheetJS로 파싱 → Univer Range API로 입력
+    async function importXlsxValuesOnly(file) {
+      setStatus('📥 파싱 중…');
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true });
+      const name = wb.SheetNames[0];
+      const ws = wb.Sheets[name];
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true });
+
+      const rows = aoa.length;
+      const cols = Math.max(0, ...aoa.map(r => r.length));
+      if (rows === 0 || cols === 0) return;
+
+      // 빈 셀을 null로 패딩하여 직사각형 배열로 맞춤
+      const values = Array.from({ length: rows }, (_, r) => {
+        const row = aoa[r] || [];
+        const arr = Array.from({ length: cols }, (_, c) => (row[c] === undefined ? null : row[c]));
+        return arr;
+      });
+
+      const fWorkbook = univerAPI.getActiveWorkbook();
+      const fSheet = fWorkbook.getActiveSheet();
+      const fRange = fSheet.getRange(0, 0, rows, cols);
+      fRange.setValues(values); // docs: Range API setValues
+    }
+
+    // 값-only 익스포트: Univer Range API → SheetJS로 XLSX 생성
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      try {
+        setStatus('📤 내보내기 중…');
+        const values = await readValuesRect(200, 50); // 안전한 기본 영역(A1:AX200)
+        const ws = XLSX.utils.aoa_to_sheet(values);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+        const ab = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([ab], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'export_values_only.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+        setStatus('✅ 내보내기 완료(값-only)');
+      } catch (err) {
+        console.error(err);
+        setStatus('❌ 내보내기 실패: ' + err.message);
+        alert('내보내기 실패: ' + err.message + '\n\n스타일/수식 보존 익스포트는 서버 구성이 필요합니다.');
+      }
+    });
+
+    async function readValuesRect(maxRows, maxCols) {
+      const fWorkbook = univerAPI.getActiveWorkbook();
+      const fSheet = fWorkbook.getActiveSheet();
+      const fRange = fSheet.getRange(0, 0, maxRows, maxCols);
+      const values = fRange.getValues();
+      // 뒤쪽 빈 행/열 제거 (단순 트리밍)
+      const trimmedRows = values.map(r => {
+        let last = r.length - 1;
+        while (last >= 0 && (r[last] === null || r[last] === undefined || r[last] === '')) last--;
+        return r.slice(0, last + 1);
+      });
+      // 가장 긴 길이에 맞춰 패딩
+      const width = Math.max(0, ...trimmedRows.map(r => r.length));
+      return trimmedRows.map(r => r.concat(Array(width - r.length).fill(null)));
+    }
+
+    // 참고: 정식 XLSX 임포트/익스포트(스타일, 수식, 차트, 인쇄 설정 보존)는
+    // Univer 서버/플러그인을 통해 처리합니다. (문서: Import & Export)
+  </script>
+</body>
+</html>

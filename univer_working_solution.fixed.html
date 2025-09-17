@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Univer Working Solution (Fixed CDN)</title>
+
+  <!-- React / deps -->
+  <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/rxjs@7.8.1/dist/bundles/rxjs.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+
+  <!-- Univer Preset UMD (updated: 0.10.x) -->
+  <script src="https://unpkg.com/@univerjs/presets@0.10.8/lib/umd/index.js"></script>
+
+  <!-- Sheets Core + locale + CSS -->
+  <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.10.8/lib/umd/index.js"></script>
+  <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.10.8/lib/umd/locales/en-US.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core@0.10.8/lib/index.css"/>
+
+  <!-- SheetJS (값-only import/export) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
+
+  <style>
+    html, body { height: 100%; margin: 0; }
+    #univer { position: absolute; inset: 44px 0 0 0; }
+    #toolbar {
+      position: absolute; top: 0; left: 0; right: 0; height: 44px;
+      display: flex; gap: 6px; align-items: center; padding: 6px 8px;
+      background: #111; color: #fff; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,'Apple SD Gothic Neo','Malgun Gothic';
+    }
+    button { padding: 6px 10px; border-radius: 8px; border: 1px solid #333; background: #222; color: #fff; cursor: pointer; }
+    button:hover { background: #2d2d2d; }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <button id="btn-new">🆕 새 시트</button>
+    <button id="btn-open">📁 XLSX 열기(값-only)</button>
+    <button id="btn-save">💾 XLSX 저장(값-only)</button>
+    <span id="status">로딩 중…</span>
+    <input id="fileInput" type="file" accept=".xlsx" style="display:none"/>
+  </div>
+  <div id="univer"></div>
+
+  <script>
+    const log = (...a)=>console.log(...a);
+    const $status = document.getElementById('status');
+    const setStatus = (s)=> ($status.textContent = s);
+
+    function assertGlobals(){
+      if (!window.UniverPresets) throw new Error('UniverPresets 전역이 없습니다 (preset UMD 로드 실패)');
+      if (!window.UniverCore) throw new Error('UniverCore 전역이 없습니다');
+      if (!window.UniverPresetSheetsCore) throw new Error('UniverPresetSheetsCore 전역이 없습니다');
+      if (!window.UniverPresetSheetsCoreEnUS) throw new Error('UniverPresetSheetsCoreEnUS 전역이 없습니다');
+    }
+
+    async function main(){
+      setStatus('🌐 페이지 로드 완료, 초기화 시작');
+      assertGlobals();
+      const { createUniver } = UniverPresets;
+      const { LocaleType, mergeLocales } = UniverCore;
+      const { UniverSheetsCorePreset } = UniverPresetSheetsCore;
+
+      const { univerAPI } = createUniver({
+        locale: LocaleType.EN_US,
+        locales: { [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS) },
+        presets: [UniverSheetsCorePreset({ container: 'univer' })],
+      });
+      univerAPI.createWorkbook({ name: 'CDN Fixed Demo' });
+      setStatus('✅ Univer 준비 완료');
+
+      // 값-only import/export
+      async function importXlsxValuesOnly(file){
+        setStatus('📥 XLSX 파싱 중…');
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true });
+        const rows = aoa.length;
+        const cols = Math.max(0, ...aoa.map(r => r.length));
+        if (!rows || !cols) return;
+        const values = Array.from({ length: rows }, (_, r) => {
+          const row = aoa[r] || [];
+          return Array.from({ length: cols }, (_, c) => row[c] === undefined ? null : row[c]);
+        });
+        const wbk = univerAPI.getActiveWorkbook();
+        const sheet = wbk.getActiveSheet();
+        sheet.getRange(0,0,rows,cols).setValues(values);
+        setStatus('✅ 불러오기 완료(값-only): ' + file.name);
+      }
+
+      async function readValuesRect(maxRows, maxCols){
+        const wbk = univerAPI.getActiveWorkbook();
+        const sheet = wbk.getActiveSheet();
+        const range = sheet.getRange(0,0,maxRows,maxCols);
+        const values = range.getValues();
+        const trimmed = values.map(r => {
+          let last = r.length - 1;
+          while (last >= 0 && (r[last] === null || r[last] === undefined || r[last] === '')) last--;
+          return r.slice(0, last + 1);
+        });
+        const width = Math.max(0, ...trimmed.map(r => r.length));
+        return trimmed.map(r => r.concat(Array(width - r.length).fill(null)));
+      }
+
+      async function exportXlsxBlob(){
+        const values = await readValuesRect(200,50);
+        const ws = XLSX.utils.aoa_to_sheet(values);
+        const book = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(book, ws, 'Sheet1');
+        const ab = XLSX.write(book, { bookType: 'xlsx', type: 'array' });
+        return new Blob([ab], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      }
+
+      document.getElementById('btn-new').addEventListener('click', ()=>{
+        univerAPI.createWorkbook({ name: 'New ' + new Date().toLocaleTimeString() });
+        setStatus('🆕 새 워크북 생성');
+      });
+      document.getElementById('btn-open').addEventListener('click', ()=>{
+        document.getElementById('fileInput').click();
+      });
+      document.getElementById('fileInput').addEventListener('change', async (e)=>{
+        const f = e.target.files[0];
+        if (f) await importXlsxValuesOnly(f);
+        e.target.value = '';
+      });
+      document.getElementById('btn-save').addEventListener('click', async ()=>{
+        const blob = await exportXlsxBlob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'export_values_only.xlsx';
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        setStatus('💾 저장 완료');
+      });
+    }
+
+    window.addEventListener('load', () => {
+      try { main(); } catch (e) {
+        console.error('💥 초기화 실패:', e);
+        setStatus('💥 초기화 실패: ' + e.message);
+      }
+    });
+  </script>
+</body>
+</html>

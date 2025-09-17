@@ -139,3 +139,34 @@ pm2 logs msm-app --lines 10  # Check logs if needed
 - Open Chrome browser to Flutter app
 - Verify empty ID/Password fields (auto-login disabled)
 - Test manual login with credentials
+
+## Univer Excel Viewer Integration (최종 해결됨)
+
+### 문제 해결 완료 (2025-09-17)
+
+**이전 문제점들:**
+1. CDN 번들 혼용/구버전 사용 (univer.full.umd.js → Preset Mode UMD)
+2. 전역 네임스페이스 접근 실수 (window 루트 → 패키지별 네임스페이스)
+3. XLSX 파일을 createWorkbook()로 직접 로딩 시도 (서버 처리 구조임)
+4. 초기화 세팅 미흡 (컨테이너/로케일 병합)
+
+**해결 방법:**
+- **index.fixed.html**: 최신 Preset UMD + 값-only 임포트/익스포트 기능 완성
+- **univer_test.fixed.html**: 공식 예제 기반 미니멀 테스트 버전
+- **문제_원인_해결_가이드.md**: 상세한 문제 분석 및 해결 과정 문서화
+
+### 로컬 테스트 방법
+```bash
+# 간단 HTTP 서버로 테스트
+python -m http.server 50577
+# 브라우저에서 http://localhost:50577/index.fixed.html 접속
+```
+
+### 기능 제한사항
+- **현재 버전**: 값-only 임포트/익스포트 (셀 값만 보존)
+- **스타일/수식/차트 보존**: 서버 구성 필요 (Univer Import/Export API)
+
+### 향후 확장 방안
+1. **서버 기반 완전 임포트/익스포트**: Univer 공식 Import/Export API 사용
+2. **오픈소스 변환기**: Luckyexcel 또는 univer-import-export 패키지 활용
+3. **Flutter 앱 통합**: WebView로 Univer 뷰어 임베드 또는 별도 웹 서비스

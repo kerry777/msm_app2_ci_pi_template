@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'dart:html' as html;
+import 'dart:ui_web' as ui;
 
 class UniverExcelViewerScreen extends StatefulWidget {
   final String? excelFilePath;
@@ -16,14 +19,49 @@ class UniverExcelViewerScreen extends StatefulWidget {
 }
 
 class _UniverExcelViewerScreenState extends State<UniverExcelViewerScreen> {
-  late final WebViewController _controller;
+  late final WebViewController? _controller;
   bool _isReady = false;
   String _status = '초기화 중...';
+  final String _iframeId = 'univer-iframe-${DateTime.now().millisecondsSinceEpoch}';
 
   @override
   void initState() {
     super.initState();
-    _initializeWebView();
+    if (kIsWeb) {
+      _initializeWebIframe();
+    } else {
+      _initializeWebView();
+    }
+  }
+
+  void _initializeWebIframe() {
+    // 웹용 iframe 등록
+    ui.platformViewRegistry.registerViewFactory(
+      _iframeId,
+      (int viewId) {
+        final iframe = html.IFrameElement()
+          ..src = 'assets/univer/index.html'
+          ..style.border = 'none'
+          ..style.width = '100%'
+          ..style.height = '100%'
+          ..allowFullscreen = true;
+
+        // 메시지 리스너 추가
+        html.window.addEventListener('message', (event) {
+          final messageEvent = event as html.MessageEvent;
+          if (messageEvent.data is String) {
+            _handleWebViewMessage(messageEvent.data as String);
+          }
+        });
+
+        return iframe;
+      },
+    );
+
+    setState(() {
+      _isReady = true;
+      _status = '준비 완료';
+    });
   }
 
   void _initializeWebView() {

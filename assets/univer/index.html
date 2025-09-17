@@ -52,10 +52,12 @@
     <script src="https://unpkg.com/rxjs/dist/bundles/rxjs.umd.min.js"></script>
     <script src="https://unpkg.com/echarts@5.6.0/dist/echarts.min.js"></script>
 
-    <script src="https://unpkg.com/@univerjs/presets/lib/umd/index.js"></script>
-    <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/index.js"></script>
-    <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/locales/en-US.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core/lib/index.css" />
+    <script src="https://unpkg.com/@univerjs/presets@0.2.0/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.2.0/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.2.0/lib/umd/locales/ko-KR.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.2.0/lib/umd/locales/en-US.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core@0.2.0/lib/index.css" />
+    <script src="https://unpkg.com/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div id="univer-container"></div>
@@ -80,37 +82,58 @@
         console.log('window.UniverCore:', typeof window.UniverCore);
         console.log('window.UniverPresetSheetsCore:', typeof window.UniverPresetSheetsCore);
 
-        // 여러 방식 시도
-        try {
-            // 방식 1: 직접 window 접근
-            if (window.UniverPresets && window.UniverCore && window.UniverPresetSheetsCore) {
-                const { createUniver } = window.UniverPresets;
-                const { LocaleType } = window.UniverCore;
-                const { UniverSheetsCorePreset } = window.UniverPresetSheetsCore;
+        // Univer 초기화 (안정적인 방식)
+        setTimeout(async () => {
+            try {
+                if (typeof UniverPresets === 'undefined' || typeof UniverCore === 'undefined' || typeof UniverPresetSheetsCore === 'undefined') {
+                    throw new Error('Univer 라이브러리가 로드되지 않았습니다');
+                }
 
-                console.log('✅ Univer 객체들 찾음!');
+                const { createUniver } = UniverPresets;
+                const { LocaleType, mergeLocales } = UniverCore;
+                const { UniverSheetsCorePreset } = UniverPresetSheetsCore;
 
-                // Univer 인스턴스 초기화
-                const { univerAPI } = createUniver({
-                    container: 'univer-container',
-                    locale: LocaleType.EN_US,
-                    presets: [UniverSheetsCorePreset()],
+                console.log('✅ Univer 객체들 로드 완료');
+
+                // 로케일 설정
+                let locales = {};
+                try {
+                    if (typeof UniverPresetSheetsCoreKoKR !== 'undefined') {
+                        locales[LocaleType.KO_KR] = mergeLocales(UniverPresetSheetsCoreKoKR);
+                    }
+                    if (typeof UniverPresetSheetsCoreEnUS !== 'undefined') {
+                        locales[LocaleType.EN_US] = mergeLocales(UniverPresetSheetsCoreEnUS);
+                    }
+                } catch (e) {
+                    console.warn('로케일 설정 실패, 기본값 사용:', e);
+                }
+
+                // Univer 인스턴스 생성
+                const result = createUniver({
+                    locale: LocaleType.KO_KR,
+                    locales: locales,
+                    presets: [UniverSheetsCorePreset({ container: 'univer-container' })],
                 });
 
                 // 전역 변수로 저장
-                window.univerAPI = univerAPI;
+                window.univerAPI = result.univerAPI;
 
-                // 초기 빈 워크북 생성
-                univerAPI.createWorkbook({ name: 'Excel 뷰어' });
+                // 약간의 지연 후 초기 워크북 생성
+                await new Promise(resolve => setTimeout(resolve, 500));
+                result.univerAPI.createWorkbook({ name: 'MSM Excel 뷰어' });
 
-                updateStatus('✅ Univer 초기화 완료');
-            } else {
-                throw new Error('Univer 객체를 찾을 수 없습니다');
+                updateStatus('✅ MSM Excel 뷰어 준비 완료');
+
+                // Flutter에 준비 완료 알림
+                if (window.FlutterChannel) {
+                    FlutterChannel.postMessage('univer_ready');
+                }
+
+            } catch (error) {
+                console.error('❌ Univer 초기화 실패:', error);
+                updateStatus('❌ 초기화 실패: ' + error.message);
             }
-        } catch (error) {
-            console.error('❌ Univer 초기화 실패:', error);
-            updateStatus('❌ Univer 초기화 실패: ' + error.message);
-        }
+        }, 1000);
 
         function updateStatus(message) {
             document.getElementById('status').textContent = message;
@@ -131,23 +154,58 @@
             try {
                 updateStatus(`📁 ${filename} 로딩 중...`);
 
-                // Univer API를 사용하여 Excel 파일 로드
                 if (!window.univerAPI) {
-                    throw new Error('Univer API를 찾을 수 없습니다.');
+                    throw new Error('Univer API를 찾을 수 없습니다');
                 }
 
-                // ArrayBuffer를 Blob으로 변환
-                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                const file = new File([blob], filename, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                if (typeof XLSX === 'undefined') {
+                    throw new Error('XLSX 라이브러리가 로드되지 않았습니다');
+                }
 
-                // Excel 파일을 Univer로 가져오기
-                await window.univerAPI.createWorkbook(file);
+                // XLSX로 파일 파싱
+                const workbook = XLSX.read(new Uint8Array(buffer), {
+                    type: 'array',
+                    cellDates: true,
+                    codepage: 65001  // UTF-8 인코딩
+                });
 
-                updateStatus(`✅ ${filename} 로딩 완료`);
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                    header: 1,
+                    raw: false,  // 한글 처리를 위해
+                    defval: null
+                });
+
+                if (jsonData.length === 0) {
+                    throw new Error('빈 파일이거나 읽을 수 있는 데이터가 없습니다');
+                }
+
+                // 안전한 크기로 제한
+                const maxRows = Math.min(jsonData.length, 200);
+                const maxCols = Math.min(Math.max(...jsonData.map(row => row ? row.length : 0)), 100);
+
+                // 데이터 정규화
+                const normalizedData = Array.from({ length: maxRows }, (_, rowIndex) => {
+                    const row = jsonData[rowIndex] || [];
+                    return Array.from({ length: maxCols }, (_, colIndex) => {
+                        const value = row[colIndex];
+                        return (value === undefined || value === '') ? null : value;
+                    });
+                });
+
+                // Univer에 데이터 입력
+                const activeWorkbook = window.univerAPI.getActiveWorkbook();
+                const activeSheet = activeWorkbook.getActiveSheet();
+                const range = activeSheet.getRange(0, 0, maxRows, maxCols);
+                range.setValues(normalizedData);
+
+                updateStatus(`✅ ${filename} 로딩 완료 (${maxRows}x${maxCols})`);
+                console.log(`Excel 데이터 로드 완료: ${maxRows}행 x ${maxCols}열`);
 
                 // Flutter에 알림
                 if (window.FlutterChannel) {
-                    FlutterChannel.postMessage('loaded:' + filename);
+                    FlutterChannel.postMessage('excel_loaded:' + filename);
                 }
 
                 return true;
@@ -156,7 +214,7 @@
                 updateStatus(`❌ ${filename} 로딩 실패: ${error.message}`);
 
                 if (window.FlutterChannel) {
-                    FlutterChannel.postMessage('error:' + error.message);
+                    FlutterChannel.postMessage('excel_error:' + error.message);
                 }
 
                 return false;

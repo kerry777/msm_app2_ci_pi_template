@@ -52,6 +52,8 @@ dependencies:
   printing: ^5.13.2
   webview_flutter: ^4.7.0  # Univer WebView 통합용
   webview_flutter_web: ^0.2.3  # 웹 플랫폼용 WebView
+  syncfusion_flutter_charts: ^31.1.19
+  syncfusion_flutter_xlsio: ^31.1.19
 
 dev_dependencies:
   flutter_test:

@@ -60,7 +60,7 @@ import 'advanced_bi_drilldown_screen.dart';
 import 'advanced_interactive_chart_screen.dart';
 import 'power_bi_dashboard_screen.dart';
 import 'advanced_multi_dimensional_screen.dart'; // 통합분석2
-import 'syncfusion_pivot_analysis_screen.dart'; // 피벗분석2_싱크퓨전
+// import 'syncfusion_pivot_analysis_screen.dart'; // 피벗분석2_싱크퓨전 - 비활성화
 import 'real_interactive_analytics_screen.dart'; // 진짜 인터랙티브 분석
 
 // 공통 폰트 크기 상수 정의
@@ -405,7 +405,7 @@ class _MainScreenState extends State<MainScreen> {
       case 'advanced_pivot_table':
         return const AdvancedPivotTableScreen(); // 고급 피벗 테이블
       case 'syncfusion_pivot_analysis':
-        return const SyncfusionPivotAnalysisScreen(); // 피벗분석2_싱크퓨전
+        return const Placeholder(); // 피벗분석2_싱크퓨전 - 임시 비활성화
 
       // === 🚀 새로운 Power BI 수준 기능들 ===
       case 'advanced_bi_drilldown':
