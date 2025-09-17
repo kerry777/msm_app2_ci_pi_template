@@ -167,7 +167,8 @@
       "Bash(start http://localhost:50570/univer_minimal_test.html)",
       "Bash(start http://localhost:50570/univer_debug_step_by_step.html)",
       "Bash(start http://localhost:50570/univer_working_version_test.html)",
-      "Bash(start http://localhost/msm/univer_working_solution_fixed.html)"
+      "Bash(start http://localhost/msm/univer_working_solution_fixed.html)",
+      "Bash(start http://localhost/msm/dashboard.html)"
     ],
     "deny": []
   }
