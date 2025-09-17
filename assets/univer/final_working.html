@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MSM Excel 뷰어 (Univer 기반)</title>
+
+  <!-- Required deps for Univer Preset Mode (CDN UMD) -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/rxjs/dist/bundles/rxjs.umd.min.js"></script>
+
+  <!-- Univer Preset (Sheets Core) - 안정적인 버전 사용 -->
+  <script src="https://unpkg.com/@univerjs/presets@0.2.0/lib/umd/index.js"></script>
+  <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.2.0/lib/umd/index.js"></script>
+  <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.2.0/lib/umd/locales/ko-KR.js"></script>
+  <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.2.0/lib/umd/locales/en-US.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core@0.2.0/lib/index.css"/>
+
+  <!-- SheetJS (Excel 파일 처리용) -->
+  <script src="https://unpkg.com/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', 'Malgun Gothic', '맑은 고딕', 'Noto Sans KR', sans-serif;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .header .subtitle {
+      margin: 5px 0 0 0;
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .toolbar {
+      background: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+      padding: 12px 20px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid #dee2e6;
+      background: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: #e9ecef;
+      transform: translateY(-1px);
+    }
+
+    .btn.primary {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+
+    .btn.primary:hover {
+      background: #0056b3;
+    }
+
+    .btn.success {
+      background: #28a745;
+      color: white;
+      border-color: #28a745;
+    }
+
+    .btn.success:hover {
+      background: #1e7e34;
+    }
+
+    .status {
+      margin-left: auto;
+      padding: 6px 12px;
+      background: #343a40;
+      color: white;
+      border-radius: 20px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .univer-wrapper {
+      flex: 1;
+      position: relative;
+      background: white;
+    }
+
+    #univer-container {
+      position: absolute;
+      inset: 0;
+    }
+
+    input[type=file] {
+      display: none;
+    }
+
+    .note {
+      font-size: 12px;
+      color: #6c757d;
+      margin-left: 8px;
+      flex: 1;
+    }
+
+    .loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255,255,255,0.95);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
+      z-index: 1000;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .error-message {
+      color: #dc3545;
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>MSM Excel 뷰어</h1>
+      <div class="subtitle">Univer 기반 고성능 스프레드시트 뷰어</div>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn primary" id="btn-new">
+        🆕 새 워크북
+      </button>
+      <button class="btn" id="btn-open">
+        📁 Excel 파일 열기
+      </button>
+      <button class="btn success" id="btn-save">
+        💾 Excel 저장
+      </button>
+      <div class="note">
+        고성능 Excel 뷰어 - 빠른 편집 및 저장
+      </div>
+      <div class="status" id="status">
+        <div class="spinner" id="spinner"></div>
+        초기화 중...
+      </div>
+      <input id="fileInput" type="file" accept=".xlsx,.xls"/>
+    </div>
+
+    <div class="univer-wrapper">
+      <div id="univer-container"></div>
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Univer 엔진 로딩 중...</div>
+      </div>
+      <div id="error-container"></div>
+    </div>
+  </div>
+
+  <script>
+    let univerAPI = null;
+    let isInitialized = false;
+
+    // DOM 요소 안전 접근 함수
+    function safeGetElement(id) {
+      return document.getElementById(id);
+    }
+
+    // 상태 표시 함수 (안전 버전)
+    function setStatus(message, type = 'info') {
+      const statusEl = safeGetElement('status');
+      const spinnerEl = safeGetElement('spinner');
+
+      if (!statusEl) {
+        console.warn('상태 표시 요소를 찾을 수 없습니다:', message);
+        return;
+      }
+
+      if (spinnerEl) {
+        spinnerEl.style.display = type === 'loading' ? 'block' : 'none';
+      }
+
+      statusEl.textContent = message;
+
+      // 스타일 안전 적용
+      try {
+        statusEl.className = 'status';
+        if (type === 'error') statusEl.style.background = '#dc3545';
+        else if (type === 'success') statusEl.style.background = '#28a745';
+        else if (type === 'loading') statusEl.style.background = '#007bff';
+        else statusEl.style.background = '#343a40';
+      } catch (e) {
+        console.warn('상태 스타일 적용 실패:', e);
+      }
+    }
+
+    // 오류 표시 함수
+    function showError(message, details = '') {
+      const errorContainer = safeGetElement('error-container');
+      if (errorContainer) {
+        errorContainer.innerHTML = `
+          <div class="error-message">
+            <strong>오류 발생:</strong> ${message}
+            ${details ? `<br><small>${details}</small>` : ''}
+          </div>
+        `;
+      }
+      console.error('MSM Excel 뷰어 오류:', message, details);
+    }
+
+    // Univer 초기화 (단순화 버전)
+    async function initializeUniver() {
+      try {
+        // 의존성 확인
+        if (typeof UniverPresets === 'undefined') {
+          throw new Error('UniverPresets가 로드되지 않았습니다');
+        }
+        if (typeof UniverCore === 'undefined') {
+          throw new Error('UniverCore가 로드되지 않았습니다');
+        }
+        if (typeof UniverPresetSheetsCore === 'undefined') {
+          throw new Error('UniverPresetSheetsCore가 로드되지 않았습니다');
+        }
+
+        const { createUniver } = UniverPresets;
+        const { LocaleType, mergeLocales } = UniverCore;
+        const { UniverSheetsCorePreset } = UniverPresetSheetsCore;
+
+        // 로케일 안전 처리
+        let locales = {};
+        try {
+          if (typeof UniverPresetSheetsCoreKoKR !== 'undefined') {
+            locales[LocaleType.KO_KR] = mergeLocales(UniverPresetSheetsCoreKoKR);
+          }
+          if (typeof UniverPresetSheetsCoreEnUS !== 'undefined') {
+            locales[LocaleType.EN_US] = mergeLocales(UniverPresetSheetsCoreEnUS);
+          }
+        } catch (e) {
+          console.warn('로케일 설정 실패, 기본값 사용:', e);
+        }
+
+        // Univer 생성 (한글 설정)
+        const result = createUniver({
+          locale: LocaleType.KO_KR,
+          locales: locales,
+          presets: [UniverSheetsCorePreset({ container: 'univer-container' })],
+        });
+
+        univerAPI = result.univerAPI;
+        window.univerAPI = univerAPI;
+
+        // 초기 워크북 생성 (단순화)
+        await new Promise(resolve => setTimeout(resolve, 500)); // 약간의 지연
+        univerAPI.createWorkbook({ name: 'MSM Excel Viewer' });
+
+        isInitialized = true;
+
+        // UI 업데이트
+        const loadingEl = safeGetElement('loading');
+        if (loadingEl) {
+          loadingEl.style.display = 'none';
+        }
+
+        setStatus('✅ 준비 완료', 'success');
+        console.log('MSM Excel 뷰어 초기화 완료');
+
+      } catch (error) {
+        console.error('Univer 초기화 실패:', error);
+        showError('초기화 실패', error.message);
+        setStatus('❌ 초기화 실패', 'error');
+
+        // 로딩 화면 숨기기
+        const loadingEl = safeGetElement('loading');
+        if (loadingEl) {
+          loadingEl.style.display = 'none';
+        }
+      }
+    }
+
+    // 이벤트 리스너 설정
+    document.addEventListener('DOMContentLoaded', function() {
+      // 새 워크북 버튼
+      const btnNew = safeGetElement('btn-new');
+      if (btnNew) {
+        btnNew.addEventListener('click', function() {
+          if (!isInitialized || !univerAPI) {
+            alert('Univer가 아직 초기화되지 않았습니다');
+            return;
+          }
+          try {
+            const timestamp = new Date().toLocaleTimeString('ko-KR');
+            univerAPI.createWorkbook({ name: `새 워크북 ${timestamp}` });
+            setStatus('🆕 새 워크북 생성됨', 'success');
+          } catch (e) {
+            showError('새 워크북 생성 실패', e.message);
+            setStatus('❌ 생성 실패', 'error');
+          }
+        });
+      }
+
+      // 파일 열기 버튼
+      const btnOpen = safeGetElement('btn-open');
+      const fileInput = safeGetElement('fileInput');
+
+      if (btnOpen && fileInput) {
+        btnOpen.addEventListener('click', function() {
+          fileInput.click();
+        });
+
+        fileInput.addEventListener('change', async function(e) {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          if (!isInitialized || !univerAPI) {
+            alert('Univer가 아직 초기화되지 않았습니다');
+            return;
+          }
+
+          try {
+            setStatus('📥 파일 처리 중...', 'loading');
+            await importExcelFile(file);
+            setStatus(`✅ ${file.name} 불러오기 완료`, 'success');
+          } catch (error) {
+            console.error('파일 불러오기 실패:', error);
+            showError('파일 불러오기 실패', error.message);
+            setStatus('❌ 불러오기 실패', 'error');
+          } finally {
+            e.target.value = '';
+          }
+        });
+      }
+
+      // 저장 버튼
+      const btnSave = safeGetElement('btn-save');
+      if (btnSave) {
+        btnSave.addEventListener('click', async function() {
+          if (!isInitialized || !univerAPI) {
+            alert('Univer가 아직 초기화되지 않았습니다');
+            return;
+          }
+
+          try {
+            setStatus('📤 파일 생성 중...', 'loading');
+            await exportToExcel();
+            setStatus('✅ Excel 파일 저장 완료', 'success');
+          } catch (error) {
+            console.error('파일 저장 실패:', error);
+            showError('파일 저장 실패', error.message);
+            setStatus('❌ 저장 실패', 'error');
+          }
+        });
+      }
+
+      // 초기화 시작
+      setTimeout(initializeUniver, 100);
+    });
+
+    // Excel 파일 임포트 (값만, 단순화)
+    async function importExcelFile(file) {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(new Uint8Array(buffer), {
+        type: 'array',
+        cellDates: true,
+        codepage: 65001,  // UTF-8 인코딩 강제
+        cellText: false,
+        raw: false
+      });
+
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+        header: 1,
+        raw: false,       // 한글 처리를 위해 raw: false
+        defval: null,
+        blankrows: false
+      });
+
+      if (jsonData.length === 0) {
+        throw new Error('빈 파일이거나 읽을 수 있는 데이터가 없습니다');
+      }
+
+      // 안전한 범위로 제한 (최대 100행 x 50열)
+      const maxRows = Math.min(jsonData.length, 100);
+      const maxCols = Math.min(Math.max(...jsonData.map(row => row ? row.length : 0)), 50);
+
+      if (maxRows === 0 || maxCols === 0) {
+        throw new Error('유효한 데이터가 없습니다');
+      }
+
+      // 데이터 정규화
+      const normalizedData = Array.from({ length: maxRows }, (_, rowIndex) => {
+        const row = jsonData[rowIndex] || [];
+        return Array.from({ length: maxCols }, (_, colIndex) => {
+          const value = row[colIndex];
+          return (value === undefined || value === '') ? null : value;
+        });
+      });
+
+      // Univer에 데이터 입력 (안전하게)
+      try {
+        const activeWorkbook = univerAPI.getActiveWorkbook();
+        const activeSheet = activeWorkbook.getActiveSheet();
+        const range = activeSheet.getRange(0, 0, maxRows, maxCols);
+        range.setValues(normalizedData);
+        console.log(`데이터 임포트 완료: ${maxRows}행 x ${maxCols}열`);
+      } catch (e) {
+        throw new Error('데이터 입력 실패: ' + e.message);
+      }
+    }
+
+    // Excel 파일 익스포트 (값만, 단순화)
+    async function exportToExcel() {
+      try {
+        const activeWorkbook = univerAPI.getActiveWorkbook();
+        const activeSheet = activeWorkbook.getActiveSheet();
+
+        // 안전한 범위로 데이터 읽기
+        const maxRows = 100;
+        const maxCols = 50;
+        const range = activeSheet.getRange(0, 0, maxRows, maxCols);
+        const values = range.getValues();
+
+        // 실제 데이터 영역 찾기
+        let lastRow = 0;
+        let lastCol = 0;
+
+        for (let r = 0; r < values.length; r++) {
+          for (let c = 0; c < values[r].length; c++) {
+            const value = values[r][c];
+            if (value !== null && value !== undefined && value !== '') {
+              lastRow = Math.max(lastRow, r);
+              lastCol = Math.max(lastCol, c);
+            }
+          }
+        }
+
+        // 최소한 1x1 데이터는 보장
+        if (lastRow === 0 && lastCol === 0) {
+          lastRow = 0;
+          lastCol = 0;
+        }
+
+        // 실제 데이터 영역만 추출
+        const exportData = values.slice(0, lastRow + 1).map(row =>
+          row.slice(0, lastCol + 1)
+        );
+
+        // Excel 파일 생성
+        const worksheet = XLSX.utils.aoa_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+
+        // 다운로드
+        const fileName = `MSM_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        const arrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([arrayBuffer], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        console.log(`Excel 파일 저장 완료: ${fileName}`);
+
+      } catch (e) {
+        throw new Error('익스포트 처리 실패: ' + e.message);
+      }
+    }
+
+    // 전역 디버깅 함수
+    window.MSMExcelViewer = {
+      getAPI: () => univerAPI,
+      getStatus: () => isInitialized,
+      reinit: initializeUniver
+    };
+  </script>
+</body>
+</html>
