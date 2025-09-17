@@ -151,7 +151,19 @@
       "Bash(start http://localhost/msm/univer_final_solution.html)",
       "Bash(start http://localhost:50570/excel_viewer_working.html)",
       "Bash(start http://localhost:50570/univer_working_solution.html)",
-      "Bash(start http://localhost:50570/univer_working_solution_fixed.html)"
+      "Bash(start http://localhost:50570/univer_working_solution_fixed.html)",
+      "Bash(start http://localhost:50570/univer_enhanced.html)",
+      "mcp__excel__read_data_from_excel",
+      "mcp__excel__get_workbook_metadata",
+      "mcp__excel__create_workbook",
+      "mcp__excel__write_data_to_excel",
+      "mcp__excel__format_range",
+      "mcp__excel__get_merged_cells",
+      "Bash(start http://localhost:50570/univer_fixed_final.html)",
+      "Bash(start http://localhost:50570/univer_final_solution.html)",
+      "Bash(start http://localhost:50570/univer_working_with_cache_busting.html)",
+      "Bash(start http://localhost:50570/univer_excel_viewer_complete.html)",
+      "Bash(start http://localhost:50570/univer_simple_with_cache.html)"
     ],
     "deny": []
   }
