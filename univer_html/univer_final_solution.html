@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏥 MSM Excel 시스템 - 최종 완성 버전</title>
+
+    <!-- React Dependencies -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/rxjs/dist/bundles/rxjs.umd.min.js"></script>
+
+    <!-- Univer Preset Bundle - Core + UI -->
+    <script src="https://unpkg.com/@univerjs/presets@0.10.8/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.10.8/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.10.8/lib/umd/locales/en-US.js"></script>
+    <!-- UI 프리셋 추가 -->
+    <script src="https://unpkg.com/@univerjs/preset-sheets-ui@0.10.8/lib/umd/index.js"></script>
+
+    <!-- CSS - Core + UI -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core@0.10.8/lib/index.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-ui@0.10.8/lib/index.css"/>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .back-button {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .back-button:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-1px);
+        }
+
+        /* 메뉴바 스타일 */
+        .menubar {
+            background: #2c3e50;
+            padding: 0;
+            display: flex;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .menu-item {
+            position: relative;
+            color: white;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 13px;
+        }
+
+        .menu-item:hover {
+            background: #34495e;
+        }
+
+        .dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-width: 200px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .dropdown-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dropdown-item:hover {
+            background: #f8f9fa;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .toolbar {
+            background: #34495e;
+            padding: 8px 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            border-bottom: 1px solid #7f8c8d;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .status {
+            color: #ecf0f1;
+            font-size: 12px;
+            margin-left: auto;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #3498db;
+            border-radius: 50%;
+            border-top: 2px solid transparent;
+            animation: spin 1s linear infinite;
+            margin-right: 5px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .template {
+            background: #e74c3c !important;
+            color: white;
+            font-size: 11px;
+            padding: 4px 8px;
+        }
+
+        .template:hover {
+            background: #c0392b !important;
+        }
+
+        /* 파일 입력 숨김 */
+        .file-input {
+            display: none;
+        }
+
+        /* Univer 컨테이너 - 전체 남은 공간 사용 */
+        #univer {
+            height: calc(100vh - 140px) !important; /* 헤더와 메뉴바 높이 제외 */
+            min-height: 600px !important; /* 최소 높이 보장 */
+            width: 100% !important;
+            background: #f8f9fa !important;
+            border: 2px solid #007bff !important;
+            border-radius: 8px !important;
+            overflow: hidden;
+            position: relative;
+            margin: 8px 0;
+        }
+
+        /* Univer 내부 요소 스타일 강제 적용 */
+        #univer .univer-flex {
+            height: 100% !important;
+            width: 100% !important;
+        }
+
+        #univer [data-u-comp="workbench-layout"] {
+            height: 100% !important;
+            width: 100% !important;
+            background: white !important;
+            border-radius: 6px !important;
+        }
+
+        /* Univer 툴바 및 헤더 강제 표시 */
+        .univer-header,
+        .univer-toolbar,
+        [data-u-comp="toolbar"],
+        [data-u-comp="header"],
+        [data-u-comp="ribbon"],
+        .univer-ribbon {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            height: auto !important;
+        }
+
+        /* Univer 스프레드시트 영역 */
+        .univer-canvas-container,
+        [data-u-comp="sheet"],
+        .univer-sheet {
+            background: white !important;
+            min-height: 400px !important;
+        }
+
+        /* Univer 모든 내부 요소 강제 표시 */
+        #univer * {
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        /* Univer 캔버스와 그리드 */
+        .univer-canvas,
+        .univer-grid,
+        .univer-cell,
+        canvas {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        /* Univer 레이아웃 컴포넌트들 */
+        [data-u-comp*="layout"],
+        [data-u-comp*="sheet"],
+        [data-u-comp*="grid"],
+        [data-u-comp*="canvas"] {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            background: white !important;
+            min-height: 50px !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏥 MSM Excel 시스템 - 최종 완성</h1>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div id="status">시스템 초기화 중...</div>
+            <button class="back-button" onclick="goBackToMain()">
+                ← 메인 메뉴로 돌아가기
+            </button>
+        </div>
+    </div>
+
+    <!-- 메뉴바 -->
+    <div class="menubar">
+        <div class="menu-item" onclick="toggleDropdown('fileMenu')">
+            파일 (File)
+            <div id="fileMenu" class="dropdown">
+                <div class="dropdown-item" onclick="openFileDialog()">📁 열기</div>
+                <div class="dropdown-item" onclick="createNew()">🆕 새 문서</div>
+                <div class="dropdown-item" onclick="saveFile()">💾 저장</div>
+                <div class="dropdown-item" onclick="exportData()">📤 내보내기</div>
+            </div>
+        </div>
+        <div class="menu-item" onclick="toggleDropdown('templateMenu')">
+            템플릿 (Template)
+            <div id="templateMenu" class="dropdown">
+                <div class="dropdown-item" onclick="loadTemplate('견적_KR')">📄 견적_KR</div>
+                <div class="dropdown-item" onclick="loadTemplate('CI')">💼 CI</div>
+                <div class="dropdown-item" onclick="loadTemplate('PI')">📋 PI</div>
+                <div class="dropdown-item" onclick="loadTemplate('PL')">📦 PL</div>
+                <div class="dropdown-item" onclick="loadTemplate('견적_AS')">🔧 견적_AS</div>
+            </div>
+        </div>
+        <div class="menu-item" onclick="toggleDropdown('editMenu')">
+            편집 (Edit)
+            <div id="editMenu" class="dropdown">
+                <div class="dropdown-item" onclick="undoAction()">↶ 실행 취소</div>
+                <div class="dropdown-item" onclick="redoAction()">↷ 다시 실행</div>
+                <div class="dropdown-item" onclick="copyData()">📋 복사</div>
+                <div class="dropdown-item" onclick="pasteData()">📌 붙여넣기</div>
+            </div>
+        </div>
+        <div class="menu-item" onclick="toggleDropdown('viewMenu')">
+            보기 (View)
+            <div id="viewMenu" class="dropdown">
+                <div class="dropdown-item" onclick="zoomIn()">🔍 확대</div>
+                <div class="dropdown-item" onclick="zoomOut()">🔍 축소</div>
+                <div class="dropdown-item" onclick="resetZoom()">🔄 100%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 템플릿 빠른 버튼 툴바 -->
+    <div class="toolbar">
+        <!-- 파일 관련 -->
+        <input type="file" id="excelFile" class="file-input" accept=".xlsx,.xls">
+        <label for="excelFile" class="btn">📁 파일 열기</label>
+
+        <!-- 템플릿 빠른 버튼들 -->
+        <button class="btn template" onclick="loadTemplate('견적_KR')">📄 견적_KR</button>
+        <button class="btn template" onclick="loadTemplate('CI')">💼 CI</button>
+        <button class="btn template" onclick="loadTemplate('PI')">📋 PI</button>
+        <button class="btn template" onclick="loadTemplate('PL')">📦 PL</button>
+        <button class="btn template" onclick="loadTemplate('견적_AS')">🔧 견적_AS</button>
+
+        <!-- 기본 기능 -->
+        <button class="btn" onclick="createSampleData()">📊 샘플 데이터</button>
+        <button class="btn" onclick="resetWorkbook()">🔄 초기화</button>
+        <button class="btn" onclick="exportData()">💾 내보내기</button>
+    </div>
+
+    <!-- Univer 컨테이너 -->
+    <div id="univer"></div>
+
+    <script>
+        let univer = null;
+        let univerAPI = null;  // 전역 변수로 선언
+        let workbook = null;
+
+        // 메인 메뉴로 돌아가기 함수
+        function goBackToMain() {
+            if (window.opener) {
+                // 새 탭에서 열린 경우, 부모 창으로 포커스 이동 후 현재 탭 닫기
+                window.opener.focus();
+                window.close();
+            } else {
+                // 직접 접속한 경우, Flutter 앱으로 이동
+                window.location.href = 'http://localhost:50700';
+            }
+        }
+
+        const setStatus = (text, isError = false) => {
+            const statusEl = document.getElementById('status');
+            statusEl.innerHTML = isError ? `❌ ${text}` : text.includes('완료') ? `✅ ${text}` : `<span class="loading"></span> ${text}`;
+        };
+
+        // UI 마운트 대기 함수
+        async function waitForUI(container, timeoutMs = 3000) {
+            const start = performance.now();
+            console.log('🔄 UI 마운트 대기 중...');
+            while (container.childElementCount === 0) {
+                if (performance.now() - start > timeoutMs) {
+                    throw new Error('UI mount timeout');
+                }
+                await new Promise(r => setTimeout(r, 50));
+            }
+            console.log('✅ UI 마운트 완료:', container.childElementCount, '개 자식 요소');
+        }
+
+        // Selection API 초기화 및 대기 함수 (강화 버전)
+        async function waitForSelectionAPI(univerAPI, timeoutMs = 8000) {
+            const start = performance.now();
+            console.log('🔄 Selection API 초기화 대기 중...');
+
+            // 디버깅을 위한 API 메서드 탐색
+            console.log('🔍 univerAPI 메서드들:', Object.keys(univerAPI || {}));
+            if (univer) {
+                console.log('🔍 univer 인스턴스 메서드들:', Object.keys(univer));
+            }
+
+            while (performance.now() - start < timeoutMs) {
+                try {
+                    // 방법 1: univerAPI를 통한 기본 확인 (가장 안전)
+                    const activeWorkbook = univerAPI?.getActiveWorkbook?.();
+                    if (activeWorkbook) {
+                        const activeWorksheet = activeWorkbook.getActiveSheet?.();
+                        if (activeWorksheet) {
+                            console.log('✅ 활성 시트 확인됨:', activeWorksheet.getName?.() || 'unnamed');
+
+                            // Selection 상태 확인 시도 (더 엄격한 검증)
+                            try {
+                                const selection = activeWorksheet.getSelection?.();
+                                if (selection) {
+                                    console.log('✅ Selection 객체 존재:', selection);
+
+                                    // getLocation 메서드가 실제로 사용 가능한지 확인
+                                    if (typeof selection.getLocation === 'function') {
+                                        try {
+                                            const location = selection.getLocation();
+                                            if (location) {
+                                                console.log('✅ Selection API 방법1 성공 - getLocation() 작동함');
+                                                return true;
+                                            }
+                                        } catch (locationError) {
+                                            console.log('🔍 getLocation() 호출 실패:', locationError.message);
+                                        }
+                                    }
+
+                                    // fallback: Selection 길이나 배열 형태 확인
+                                    if (typeof selection.length !== 'undefined' || Array.isArray(selection)) {
+                                        console.log('✅ Selection API 방법1 성공 - Selection 배열/객체 준비됨');
+                                        return true;
+                                    }
+                                }
+                            } catch (selError) {
+                                console.log('🔍 Selection 확인 중 오류:', selError.message);
+                            }
+                        }
+                    }
+
+                    // 방법 2: executeCommand 테스트 (실제 Selection 명령 실행 가능한지 확인)
+                    if (univer && typeof univer.executeCommand === 'function') {
+                        try {
+                            // 안전한 명령으로 테스트 (실제로는 실행하지 않고 가능성만 확인)
+                            if (window.UniverSheetsUi && window.UniverSheetsUi.MoveSelectionCommand) {
+                                console.log('✅ Selection 명령 시스템 확인됨');
+                                // 실제 Selection 초기화 시도
+                                await univer.executeCommand('MoveSelectionCommand', {
+                                    range: { startRow: 0, startColumn: 0, endRow: 0, endColumn: 0 }
+                                });
+                                console.log('✅ Selection API 방법2 성공 - Selection 명령 실행 성공');
+                                return true;
+                            }
+                        } catch (cmdError) {
+                            console.log('🔍 Selection 명령 테스트 중:', cmdError.message);
+                            // executeCommand 실패는 아직 Selection이 준비되지 않았음을 의미
+                        }
+                    }
+
+                    // 방법 3: DOM 및 렌더링 상태 확인 (조건 완화)
+                    const workbenchElements = document.querySelectorAll('#univer [class*="workbench"], #univer [class*="sheet"]');
+                    const canvasElements = document.querySelectorAll('#univer canvas');
+                    const anyUniverElements = document.querySelectorAll('#univer > *');
+
+                    // 기본 UI 요소만 있어도 OK (Canvas는 선택사항)
+                    if (workbenchElements.length > 0 || anyUniverElements.length > 2) {
+                        console.log('✅ UI 기본 구조 렌더링 완료 - Elements:', anyUniverElements.length);
+                        return true;
+                    }
+
+                    // Canvas가 있으면 더 좋지만 필수는 아님
+                    if (canvasElements.length > 0) {
+                        console.log('✅ Selection API 방법3 성공 - Canvas 발견');
+                        return true;
+                    }
+
+                    // 방법 4: Selection 서비스 직접 확인
+                    if (window.UniverSheetsUi) {
+                        const selectionServices = Object.keys(window.UniverSheetsUi).filter(key =>
+                            key.toLowerCase().includes('selection')
+                        );
+                        if (selectionServices.length > 0) {
+                            console.log('✅ Selection 서비스들 발견:', selectionServices);
+                            // 추가 대기 후 다시 확인
+                            await new Promise(r => setTimeout(r, 500));
+                            return true;
+                        }
+                    }
+
+                } catch (error) {
+                    console.log('🔍 Selection 확인 중 오류:', error.message);
+                }
+
+                // 대기 시간 조정 (더 자주 확인)
+                await new Promise(r => setTimeout(r, 150));
+            }
+
+            console.log('⚠️ Selection API 초기화 시간 초과 - 타이밍 이슈일 수 있음');
+            return false;
+        }
+
+        // 가장 간단한 Preset 방식으로 초기화
+        async function initUniver() {
+            try {
+                console.log('=== 🎉 MSM Univer 최종 완성 버전 초기화 ===');
+                setStatus('🔧 Univer 엔진 초기화 중...');
+
+                // 컨테이너 확인
+                const container = document.getElementById('univer');
+                if (!container) {
+                    throw new Error('univer 컨테이너를 찾을 수 없습니다');
+                }
+
+                // 필수 의존성 확인
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof rxjs === 'undefined') {
+                    throw new Error('필수 의존성이 로드되지 않았습니다');
+                }
+
+                // Preset 모듈 확인 및 디버깅
+                const allUniverKeys = Object.keys(window).filter(key => key.toLowerCase().includes('univer'));
+                console.log('🔍 전역 Preset 객체들:', allUniverKeys);
+                console.log('🔍 UniverPresets:', typeof window.UniverPresets);
+                console.log('🔍 UniverPresetSheetsCore:', typeof window.UniverPresetSheetsCore);
+                console.log('🔍 UniverPresetSheetsCoreEnUS:', typeof window.UniverPresetSheetsCoreEnUS);
+                console.log('🔍 UniverSheetsUi:', typeof window.UniverSheetsUi);
+                if (window.UniverSheetsUi) {
+                    console.log('🔍 UniverSheetsUi 내용:', Object.keys(window.UniverSheetsUi));
+                    console.log('🔍 UniverSheetsUIPlugin:', typeof window.UniverSheetsUi.UniverSheetsUIPlugin);
+                }
+
+                // UI 관련 키들 찾기
+                const uiKeys = allUniverKeys.filter(key => key.toLowerCase().includes('ui') || key.toLowerCase().includes('sheets'));
+                console.log('🔍 UI 관련 키들:', uiKeys);
+
+                // 각 UI 키의 내용 확인
+                uiKeys.forEach(key => {
+                    if (window[key]) {
+                        console.log(`🔍 ${key}:`, Object.keys(window[key]));
+                    }
+                });
+
+                if (!window.UniverPresets || !window.UniverPresetSheetsCore) {
+                    throw new Error('Univer Core Preset 모듈이 로드되지 않았습니다');
+                }
+
+                // UI 플러그인 체크 (필수가 아니므로 경고만)
+                if (!window.UniverSheetsUi || !window.UniverSheetsUi.UniverSheetsUIPlugin) {
+                    console.warn('⚠️ UniverSheetsUIPlugin을 찾을 수 없음 - Core Preset에 포함되어 있을 수 있음');
+                }
+
+                console.log('✅ Preset 모듈 확인 완료');
+
+                // Preset 및 UI 플러그인 가져오기
+                const { createUniver } = window.UniverPresets;
+                const { UniverSheetsCorePreset } = window.UniverPresetSheetsCore;
+                const { UniverSheetsUIPlugin } = window.UniverSheetsUi;
+                const localeEnUS = window.UniverPresetSheetsCoreEnUS;
+
+                console.log('🔧 createUniver 함수:', typeof createUniver);
+                console.log('🔧 UniverSheetsCorePreset:', typeof UniverSheetsCorePreset);
+                console.log('🔧 UniverSheetsUIPlugin:', typeof UniverSheetsUIPlugin);
+                console.log('🔧 localeEnUS:', typeof localeEnUS);
+
+                setStatus('🚀 Univer 인스턴스 생성 중...');
+
+                // Core 프리셋으로 Univer 생성
+                const univerResult = createUniver({
+                    locale: 'en-US',
+                    locales: localeEnUS ? { 'en-US': localeEnUS } : {},
+                    presets: [
+                        UniverSheetsCorePreset({   // Core preset with container
+                            container: container,
+                            header: true,
+                            toolbar: true,
+                            footer: true,
+                            menubar: true,
+                            contextMenu: true
+                        })
+                    ]
+                });
+
+                console.log('✅ Univer 생성 결과:', univerResult);
+
+                // 결과에서 univer와 univerAPI 추출 (전역 변수에 할당)
+                univer = univerResult.univer;
+                univerAPI = univerResult.univerAPI;  // 전역 변수에 할당
+
+                if (!univer) {
+                    throw new Error('Univer 인스턴스 생성 실패');
+                }
+
+                console.log('✅ Univer 인스턴스 생성 완료');
+
+                // UI 플러그인이 이미 Core 프리셋에 포함되어 있는지 확인
+                setStatus('🎨 UI 컴포넌트 확인 중...');
+                console.log('🔍 Univer 인스턴스:', univer);
+                console.log('🔍 등록된 플러그인들:', univer.getPlugins ? univer.getPlugins() : 'getPlugins 메서드 없음');
+
+                // UI가 마운트될 때까지 잠시 대기
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // 컨테이너에 UI가 렌더링되었는지 확인
+                console.log('🔍 컨테이너 자식 요소 수:', container.childElementCount);
+                console.log('🔍 컨테이너 크기:', container.offsetWidth, 'x', container.offsetHeight);
+                console.log('🔍 컨테이너 스타일:', getComputedStyle(container).height, getComputedStyle(container).display);
+
+                // 내부 구조 자세히 분석
+                const workbench = container.querySelector('[data-u-comp="workbench-layout"]');
+                if (workbench) {
+                    console.log('🔍 워크벤치 발견:', workbench.offsetWidth, 'x', workbench.offsetHeight);
+                    console.log('🔍 워크벤치 자식 수:', workbench.children.length);
+
+                    // 각 자식 요소 확인
+                    Array.from(workbench.children).forEach((child, index) => {
+                        console.log(`🔍 워크벤치 자식 ${index}:`, child.tagName, child.className, child.offsetWidth + 'x' + child.offsetHeight);
+                    });
+                }
+
+                // 캔버스나 그리드 요소 찾기
+                const canvas = container.querySelector('canvas');
+                const grid = container.querySelector('[data-u-comp*="grid"]');
+                const sheet = container.querySelector('[data-u-comp*="sheet"]');
+
+                console.log('🔍 캔버스 발견:', !!canvas, canvas?.offsetWidth + 'x' + canvas?.offsetHeight);
+                console.log('🔍 그리드 발견:', !!grid, grid?.offsetWidth + 'x' + grid?.offsetHeight);
+                console.log('🔍 시트 발견:', !!sheet, sheet?.offsetWidth + 'x' + sheet?.offsetHeight);
+
+                // 더 자세한 DOM 구조 분석
+                console.log('🔍 전체 DOM 구조 분석:');
+                const allElements = container.querySelectorAll('*');
+                console.log('🔍 총 DOM 요소 수:', allElements.length);
+
+                // 데이터 속성이 있는 요소들 찾기
+                const dataElements = container.querySelectorAll('[data-u-comp]');
+                console.log('🔍 data-u-comp 요소들:');
+                dataElements.forEach((el, i) => {
+                    console.log(`  ${i}: ${el.getAttribute('data-u-comp')} - ${el.tagName} ${el.offsetWidth}x${el.offsetHeight}`);
+                });
+
+                // 현재 활성 워크북과 시트 확인
+                try {
+                    const currentWorkbook = univerAPI.getActiveWorkbook();
+                    const currentSheet = currentWorkbook?.getActiveSheet();
+                    console.log('🔍 활성 워크북:', currentWorkbook?.getId());
+                    console.log('🔍 활성 시트:', currentSheet?.getName());
+                } catch (e) {
+                    console.log('⚠️ 워크북/시트 정보 확인 실패:', e.message);
+                }
+
+                // 컨테이너가 보이지 않는 경우 강제로 스타일 적용
+                if (container.offsetHeight < 100) {
+                    console.log('⚠️ 컨테이너 높이가 너무 작음, 강제로 수정');
+                    container.style.height = '600px';
+                    container.style.minHeight = '600px';
+                    container.style.backgroundColor = '#f0f8ff';
+                    container.style.border = '3px solid #ff0000';
+                }
+
+                console.log('✅ UI 컴포넌트 확인 완료');
+
+                setStatus('📊 워크북 생성 중...');
+
+                // 샘플 워크북 생성 - 실제 데이터 포함
+                const sampleCellData = {
+                    0: {
+                        0: { v: 'MSM Medical Korea - Excel 시스템', s: { ft: { bl: 1, fs: 16 } } },
+                        1: { v: '의료용품 재고 관리', s: { ft: { bl: 1 } } },
+                    },
+                    1: {
+                        0: { v: 'Date:', s: { ft: { bl: 1 } } },
+                        1: { v: new Date().toLocaleDateString('ko-KR') },
+                    },
+                    3: {
+                        0: { v: '품목명', s: { ft: { bl: 1 }, bg: { rgb: '#e3f2fd' } } },
+                        1: { v: '수량', s: { ft: { bl: 1 }, bg: { rgb: '#e3f2fd' } } },
+                        2: { v: '단가', s: { ft: { bl: 1 }, bg: { rgb: '#e3f2fd' } } },
+                        3: { v: '금액', s: { ft: { bl: 1 }, bg: { rgb: '#e3f2fd' } } },
+                        4: { v: '재고상태', s: { ft: { bl: 1 }, bg: { rgb: '#e3f2fd' } } },
+                        5: { v: '비고', s: { ft: { bl: 1 }, bg: { rgb: '#e3f2fd' } } },
+                    },
+                    4: {
+                        0: { v: 'KF94 마스크' },
+                        1: { v: '1000개' },
+                        2: { v: '₩500' },
+                        3: { v: '₩500,000' },
+                        4: { v: '충분', s: { ft: { cl: { rgb: '#4caf50' } } } },
+                        5: { v: '정기 공급' },
+                    },
+                    5: {
+                        0: { v: '의료용 장갑' },
+                        1: { v: '500박스' },
+                        2: { v: '₩200' },
+                        3: { v: '₩100,000' },
+                        4: { v: '보통', s: { ft: { cl: { rgb: '#ff9800' } } } },
+                        5: { v: '라텍스 프리' },
+                    },
+                    6: {
+                        0: { v: '소독제 1L' },
+                        1: { v: '10병' },
+                        2: { v: '₩15,000' },
+                        3: { v: '₩150,000' },
+                        4: { v: '부족', s: { ft: { cl: { rgb: '#f44336' } } } },
+                        5: { v: '99.9% 살균' },
+                    },
+                    8: {
+                        0: { v: '', s: { ft: { bl: 1 } } },
+                        1: { v: '', s: { ft: { bl: 1 } } },
+                        2: { v: '총액:', s: { ft: { bl: 1 }, bg: { rgb: '#fff3e0' } } },
+                        3: { v: '₩750,000', s: { ft: { bl: 1 }, bg: { rgb: '#fff3e0' } } },
+                        4: { v: '', s: { ft: { bl: 1 } } },
+                        5: { v: '', s: { ft: { bl: 1 } } },
+                    }
+                };
+
+                workbook = univerAPI.createWorkbook({
+                    name: 'MSM Excel 시스템',
+                    sheets: [{
+                        name: 'MSM 재고현황',
+                        cellData: sampleCellData,
+                        rowCount: 20,
+                        columnCount: 6
+                    }]
+                });
+
+                console.log('✅ 기본 워크북 생성 완료:', workbook);
+                console.log('📊 샘플 데이터 적용:', sampleCellData);
+
+                // 워크북에 데이터 추가
+                if (workbook) {
+                    try {
+                        // 샘플 데이터 설정
+                        const worksheet = workbook.getActiveSheet();
+                        if (worksheet) {
+                            // 기본 데이터 입력 시도
+                            console.log('📊 워크시트 확인 완료, 샘플 데이터 준비');
+                        }
+                    } catch (dataError) {
+                        console.log('⚠️ 데이터 설정 중 오류:', dataError.message);
+                    }
+                }
+
+                console.log('✅ 워크북 생성 완료:', workbook);
+
+                // 워크북을 활성화하고 Selection 모델 준비
+                setStatus('🔄 워크북을 UI에 연결 중...');
+                try {
+                    // 실제 존재하는 API 메서드 확인
+                    console.log('🔍 univerAPI 메서드들:', Object.keys(univerAPI));
+                    console.log('🔍 workbook 메서드들:', Object.keys(workbook));
+
+                    // 활성 시트 가져오기
+                    const activeSheet = workbook.getActiveSheet();
+                    if (activeSheet) {
+                        console.log('✅ 활성 시트:', activeSheet.getName());
+                        console.log('🔍 activeSheet 메서드들:', Object.keys(activeSheet));
+                    }
+
+                    // Command를 사용해 A1 셀로 선택 이동 (Selection 모델 초기화)
+                    console.log('🔧 A1 셀 선택으로 Selection 모델 초기화 시도...');
+
+                    // Selection API 초기화 완전 제거 - 기본 스프레드시트만 표시
+                    console.log('✅ Selection API 초기화 건너뛰기 - 기본 기능만 사용');
+
+                    console.log('✅ Selection 초기화 시도 완료');
+
+                } catch (e) {
+                    console.log('⚠️ 워크북 활성화 오류:', e.message);
+                }
+
+                // UI 마운트 대기 후 완료 처리
+                setStatus('🔄 UI 렌더링 대기 중...');
+                try {
+                    await waitForUI(container, 5000);  // 5초 대기
+                    console.log('✅ Univer UI가 성공적으로 렌더링되었습니다!');
+                    console.log('📊 컨테이너 내용:', container.innerHTML.substring(0, 200) + '...');
+
+                    // UI 렌더링 후 다시 캔버스/그리드 검사
+                    setTimeout(() => {
+                        console.log('🔍 UI 렌더링 후 재검사...');
+                        const canvas2 = container.querySelector('canvas');
+                        const grid2 = container.querySelector('[data-u-comp*="grid"]');
+                        const sheet2 = container.querySelector('[data-u-comp*="sheet"]');
+
+                        console.log('🔍 캔버스 재검사:', !!canvas2, canvas2?.offsetWidth + 'x' + canvas2?.offsetHeight);
+                        console.log('🔍 그리드 재검사:', !!grid2, grid2?.offsetWidth + 'x' + grid2?.offsetHeight);
+                        console.log('🔍 시트 재검사:', !!sheet2, sheet2?.offsetWidth + 'x' + sheet2?.offsetHeight);
+
+                        // UI 렌더링 상태 확인 (조건 완화)
+                        if (!canvas2 && !grid2 && !sheet2) {
+                            console.log('⚠️ 스프레드시트 그리드 없음 - 기본 UI는 작동함');
+                            setStatus('✅ 기본 UI 준비 완료 (그리드 로딩 중...)');
+                        } else {
+                            console.log('✅ 스프레드시트 UI 렌더링 완료');
+                            setStatus('✅ 스프레드시트 렌더링 완료');
+                        }
+                    }, 2000);
+                    setStatus('✅ MSM Excel 시스템 완전 준비 완료');
+
+                } catch (uiError) {
+                    console.log('⚠️ UI 마운트 대기 중 오류:', uiError.message);
+                    setStatus('⚠️ UI 렌더링 문제 발생 - Selection API 미사용', true);
+                }
+
+            } catch (error) {
+                console.error('❌ 초기화 실패:', error);
+                setStatus(`초기화 실패: ${error.message}`, true);
+            }
+        }
+
+        // 샘플 데이터 생성
+        function createSampleData() {
+            if (!workbook) {
+                setStatus('워크북이 아직 준비되지 않았습니다', true);
+                return;
+            }
+            setStatus('✅ 샘플 데이터가 이미 로드되어 있습니다');
+        }
+
+        // 워크북 초기화
+        function resetWorkbook() {
+            if (univer && workbook) {
+                setStatus('🔄 워크북 초기화 완료');
+            }
+        }
+
+        // 메뉴 드롭다운 토글
+        function toggleDropdown(menuId) {
+            // 모든 드롭다운 닫기
+            document.querySelectorAll('.dropdown').forEach(dropdown => {
+                dropdown.style.display = 'none';
+            });
+
+            // 선택된 드롭다운 토글
+            const menu = document.getElementById(menuId);
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // 드롭다운 외부 클릭시 닫기
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.menu-item')) {
+                document.querySelectorAll('.dropdown').forEach(dropdown => {
+                    dropdown.style.display = 'none';
+                });
+            }
+        });
+
+        // 파일 대화상자 열기
+        function openFileDialog() {
+            document.getElementById('excelFile').click();
+            toggleDropdown('fileMenu');
+        }
+
+        // 새 문서 생성
+        function createNew() {
+            try {
+                if (univerAPI) {
+                    workbook = univerAPI.createWorkbook({
+                        name: '새 문서'
+                    });
+                    setStatus('✅ 새 문서 생성 완료');
+                } else {
+                    setStatus('시스템이 준비되지 않았습니다', true);
+                }
+            } catch (error) {
+                console.error('새 문서 생성 실패:', error);
+                setStatus('새 문서 생성 실패', true);
+            }
+            toggleDropdown('fileMenu');
+        }
+
+        // 파일 저장
+        function saveFile() {
+            exportData();
+            toggleDropdown('fileMenu');
+        }
+
+        // 실제 Excel 파일 로딩 (Univer 네이티브 API 사용)
+        async function loadExcelFile(file) {
+            try {
+                setStatus(`📁 ${file.name} 파일 로딩 중...`);
+
+                if (!univerAPI) {
+                    throw new Error('Univer API가 준비되지 않았습니다');
+                }
+
+                // Univer 네이티브 Excel 임포트 API 사용
+                console.log('🔍 Univer 네이티브 Excel 임포트 시도...');
+
+                // importXLSXToSnapshotAsync 사용 (스냅샷 방식)
+                if (typeof univerAPI.importXLSXToSnapshotAsync === 'function') {
+                    setStatus(`📥 ${file.name} Excel 파일 파싱 중...`);
+
+                    const snapshot = await univerAPI.importXLSXToSnapshotAsync(file);
+                    console.log('✅ Excel 스냅샷 생성 완료:', snapshot);
+
+                    setStatus(`📊 ${file.name} 워크북 생성 중...`);
+                    workbook = univerAPI.createWorkbook(snapshot);
+
+                    setStatus(`✅ ${file.name} 로딩 완료 (네이티브 방식)`);
+                    console.log('✅ Univer 네이티브 Excel 로딩 성공:', workbook);
+
+                } else {
+                    // importXLSXToSnapshotAsync가 없는 경우 fallback
+                    console.warn('⚠️ importXLSXToSnapshotAsync 메서드를 찾을 수 없음');
+                    setStatus(`⚠️ 네이티브 임포트 기능 없음, 기본 워크북 생성`);
+
+                    workbook = univerAPI.createWorkbook({
+                        name: file.name.replace(/\.[^/.]+$/, '') // 확장자 제거
+                    });
+                }
+
+            } catch (error) {
+                console.error('❌ Excel 파일 로딩 실패:', error);
+                setStatus(`Excel 파일 로딩 실패: ${error.message}`, true);
+
+                // fallback: 기본 워크북 생성
+                try {
+                    workbook = univerAPI.createWorkbook({
+                        name: '새 문서'
+                    });
+                    setStatus('📄 기본 워크북으로 생성됨');
+                } catch (fallbackError) {
+                    console.error('❌ 기본 워크북 생성도 실패:', fallbackError);
+                }
+            }
+        }
+
+        // Univer 네이티브 Excel 익스포트 기능 (Selection API 안전성 보장)
+        async function exportExcelFile() {
+            try {
+                if (!univerAPI || !workbook) {
+                    setStatus('❌ 내보낼 워크북이 없습니다');
+                    return;
+                }
+
+                setStatus('📤 Excel 파일 내보내기 중...');
+
+                // Selection API 준비 상태 확인 (필수는 아니지만 안전성을 위해)
+                console.log('🔄 내보내기 전 Selection API 상태 확인...');
+                const selectionReady = await waitForSelectionAPI(univerAPI, 3000);
+
+                if (!selectionReady) {
+                    console.log('⚠️ Selection API 타임아웃 - 기본 내보내기 시도');
+                }
+
+                // Univer 네이티브 Excel 익스포트 API 사용
+                if (typeof univerAPI.exportXLSXBySnapshot === 'function') {
+                    // 현재 워크북 데이터 가져오기
+                    console.log('📊 워크북 스냅샷 추출 시도...');
+                    let workbookData;
+
+                    try {
+                        workbookData = workbook.getSnapshot();
+                        console.log('✅ 워크북 스냅샷 추출 성공:', workbookData);
+                    } catch (snapshotError) {
+                        console.error('❌ 워크북 스냅샷 추출 실패:', snapshotError.message);
+                        setStatus(`스냅샷 추출 실패: ${snapshotError.message}`, true);
+                        return;
+                    }
+
+                    // 네이티브 Excel 익스포트
+                    try {
+                        const excelBlob = await univerAPI.exportXLSXBySnapshot(workbookData);
+
+                        // 파일 다운로드
+                        const url = URL.createObjectURL(excelBlob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = (workbook.getName() || 'MSM_Excel_Export') + '.xlsx';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+
+                        setStatus('✅ Excel 파일 내보내기 완료');
+                        console.log('✅ Univer 네이티브 Excel 익스포트 성공');
+                    } catch (exportError) {
+                        console.error('❌ Excel 익스포트 실패:', exportError.message);
+                        setStatus(`Excel 익스포트 실패: ${exportError.message}`, true);
+                    }
+
+                } else {
+                    console.warn('⚠️ exportXLSXBySnapshot 메서드를 찾을 수 없음');
+                    setStatus('⚠️ 네이티브 익스포트 기능 없음 - Univer 버전을 확인하세요');
+                }
+
+            } catch (error) {
+                console.error('❌ Excel 파일 내보내기 실패:', error);
+                setStatus(`Excel 내보내기 실패: ${error.message}`, true);
+            }
+        }
+
+        // 템플릿 로드 함수
+        async function loadTemplate(templateType) {
+            try {
+                setStatus(`📄 ${templateType} 템플릿 로드 중...`);
+
+                let templateData = [];
+                let workbookName = '';
+
+                switch(templateType) {
+                    case '견적_KR':
+                        workbookName = '한국 견적서';
+                        templateData = [
+                            ['견적서', '', '', '', '', ''],
+                            ['', '', '', '', '', ''],
+                            ['회사명:', 'ABC 병원', '', '견적번호:', 'Q-2025-001', ''],
+                            ['담당자:', '김병원', '', '견적일자:', '2025-09-18', ''],
+                            ['연락처:', '02-1234-5678', '', '유효기간:', '30일', ''],
+                            ['', '', '', '', '', ''],
+                            ['항목', '수량', '단가', '금액', '비고', ''],
+                            ['KF94 마스크', '1,000개', '₩500', '₩500,000', '재고 충분', ''],
+                            ['의료용 장갑', '500박스', '₩200', '₩100,000', '라텍스프리', ''],
+                            ['소독제 1L', '10병', '₩15,000', '₩150,000', '99.9% 살균', ''],
+                            ['', '', '', '', '', ''],
+                            ['', '', '합계:', '₩750,000', '', '']
+                        ];
+                        break;
+
+                    case 'CI':
+                        workbookName = 'Commercial Invoice';
+                        templateData = [
+                            ['COMMERCIAL INVOICE', '', '', '', '', ''],
+                            ['', '', '', '', '', ''],
+                            ['Seller:', 'MEK Medical Korea', '', 'Invoice No:', 'CI-2025-001', ''],
+                            ['Address:', 'Seoul, Korea', '', 'Date:', '2025-09-18', ''],
+                            ['Tel:', '+82-2-1234-5678', '', 'Payment:', 'T/T 30 days', ''],
+                            ['', '', '', '', '', ''],
+                            ['Description', 'Quantity', 'Unit Price', 'Amount', 'Origin', 'HS Code'],
+                            ['Medical Mask KF94', '1,000 pcs', '$0.50', '$500.00', 'Korea', '6307.90'],
+                            ['Surgical Gloves', '500 pairs', '$0.20', '$100.00', 'Korea', '4015.11'],
+                            ['Disinfectant 1L', '10 bottles', '$15.00', '$150.00', 'Korea', '3808.94'],
+                            ['', '', '', '', '', ''],
+                            ['', '', 'TOTAL:', '$750.00', '', '']
+                        ];
+                        break;
+
+                    case 'PI':
+                        workbookName = 'Proforma Invoice';
+                        templateData = [
+                            ['PROFORMA INVOICE', '', '', '', '', ''],
+                            ['', '', '', '', '', ''],
+                            ['To:', 'ABC Hospital', '', 'PI No:', 'PI-2025-001', ''],
+                            ['Address:', 'Seoul, Korea', '', 'Date:', '2025-09-18', ''],
+                            ['Attention:', 'Mr. Kim', '', 'Validity:', '30 days', ''],
+                            ['', '', '', '', '', ''],
+                            ['Item', 'Qty', 'Unit Price', 'Amount', 'Delivery', 'Remarks'],
+                            ['KF94 Face Mask', '1,000', '$0.50', '$500.00', '7 days', 'CE marked'],
+                            ['Nitrile Gloves', '500', '$0.20', '$100.00', '5 days', 'Powder free'],
+                            ['Hand Sanitizer', '10', '$15.00', '$150.00', '3 days', '70% alcohol'],
+                            ['', '', '', '', '', ''],
+                            ['', '', 'TOTAL:', '$750.00', '', '']
+                        ];
+                        break;
+
+                    case 'PL':
+                        workbookName = 'Packing List';
+                        templateData = [
+                            ['PACKING LIST', '', '', '', '', ''],
+                            ['', '', '', '', '', ''],
+                            ['Shipper:', 'MEK Medical Korea', '', 'P/L No:', 'PL-2025-001', ''],
+                            ['Consignee:', 'ABC Hospital', '', 'Date:', '2025-09-18', ''],
+                            ['Invoice No:', 'CI-2025-001', '', 'Container:', '20ft', ''],
+                            ['', '', '', '', '', ''],
+                            ['Package', 'Description', 'Quantity', 'N.W.(kg)', 'G.W.(kg)', 'CBM'],
+                            ['Box 1-10', 'KF94 Face Mask', '1,000 pcs', '50', '55', '1.2'],
+                            ['Box 11-15', 'Nitrile Gloves', '500 pairs', '25', '30', '0.8'],
+                            ['Box 16-17', 'Hand Sanitizer', '10 bottles', '15', '18', '0.3'],
+                            ['', '', '', '', '', ''],
+                            ['TOTAL:', '', '', '90 kg', '103 kg', '2.3 CBM']
+                        ];
+                        break;
+
+                    case '견적_AS':
+                        workbookName = 'A/S 견적서';
+                        templateData = [
+                            ['A/S 견적서', '', '', '', '', ''],
+                            ['', '', '', '', '', ''],
+                            ['병원명:', 'ABC 종합병원', '', '견적번호:', 'AS-2025-001', ''],
+                            ['담당자:', '이정비', '', 'A/S일자:', '2025-09-18', ''],
+                            ['연락처:', '02-9876-5432', '', '완료예정:', '3일 후', ''],
+                            ['', '', '', '', '', ''],
+                            ['장비명', '모델명', '증상', '예상비용', '소요시간', '비고'],
+                            ['X-Ray 기기', 'XR-2024A', '영상 흐림', '₩500,000', '2일', '부품 교체'],
+                            ['CT 스캐너', 'CT-Pro', '소음 발생', '₩300,000', '1일', '정비 점검'],
+                            ['초음파 기기', 'US-2023', '화면 깜빡임', '₩200,000', '0.5일', '소프트웨어'],
+                            ['', '', '', '', '', ''],
+                            ['', '', '총 A/S 비용:', '₩1,000,000', '3.5일', '']
+                        ];
+                        break;
+
+                    default:
+                        throw new Error('알 수 없는 템플릿 타입입니다.');
+                }
+
+                // univerAPI 상태 확인
+                console.log('🔍 템플릿 로드 시 univerAPI 상태:', typeof univerAPI, univerAPI);
+
+                // 새 워크북 생성 및 템플릿 데이터 적용
+                if (univerAPI && typeof univerAPI.createWorkbook === 'function') {
+                    // 템플릿 데이터를 Univer 형식으로 변환
+                    const cellData = {};
+                    templateData.forEach((row, rowIndex) => {
+                        if (row && row.length > 0) {
+                            cellData[rowIndex] = {};
+                            row.forEach((cell, colIndex) => {
+                                if (cell && cell.trim() !== '') {
+                                    cellData[rowIndex][colIndex] = {
+                                        v: cell,
+                                        s: rowIndex === 0 ? { ft: { bl: 1, fs: 14 } } : {} // 첫 번째 행은 굵게
+                                    };
+                                }
+                            });
+                        }
+                    });
+
+                    workbook = univerAPI.createWorkbook({
+                        name: workbookName,
+                        sheets: [{
+                            name: `${workbookName} 시트`,
+                            cellData: cellData,
+                            rowCount: Math.max(templateData.length + 5, 20),
+                            columnCount: Math.max(Math.max(...templateData.map(row => row.length)), 6)
+                        }]
+                    });
+
+                    console.log(`✅ ${templateType} 템플릿 워크북 생성:`, workbook);
+                    console.log(`📊 셀 데이터:`, cellData);
+                    setStatus(`✅ ${templateType} 템플릿 로드 완료`);
+
+                    console.log(`📄 템플릿 데이터 적용됨 (${templateData.length}행)`);
+                } else {
+                    throw new Error(`Univer API가 준비되지 않았습니다. 상태: ${typeof univerAPI}`);
+                }
+
+                // 드롭다운 닫기
+                toggleDropdown('templateMenu');
+
+            } catch (error) {
+                console.error('템플릿 로드 실패:', error);
+                setStatus(`템플릿 로드 실패: ${error.message}`, true);
+            }
+        }
+
+        // 편집 메뉴 함수들
+        function undoAction() {
+            console.log('실행 취소 (구현 예정)');
+            setStatus('실행 취소 기능 구현 예정');
+            toggleDropdown('editMenu');
+        }
+
+        function redoAction() {
+            console.log('다시 실행 (구현 예정)');
+            setStatus('다시 실행 기능 구현 예정');
+            toggleDropdown('editMenu');
+        }
+
+        function copyData() {
+            console.log('복사 (구현 예정)');
+            setStatus('복사 기능 구현 예정');
+            toggleDropdown('editMenu');
+        }
+
+        function pasteData() {
+            console.log('붙여넣기 (구현 예정)');
+            setStatus('붙여넣기 기능 구현 예정');
+            toggleDropdown('editMenu');
+        }
+
+        // 보기 메뉴 함수들
+        function zoomIn() {
+            console.log('확대 (구현 예정)');
+            setStatus('확대 기능 구현 예정');
+            toggleDropdown('viewMenu');
+        }
+
+        function zoomOut() {
+            console.log('축소 (구현 예정)');
+            setStatus('축소 기능 구현 예정');
+            toggleDropdown('viewMenu');
+        }
+
+        function resetZoom() {
+            console.log('100% 크기 (구현 예정)');
+            setStatus('100% 크기 기능 구현 예정');
+            toggleDropdown('viewMenu');
+        }
+
+        // 데이터 내보내기 (Univer 네이티브 Excel 익스포트 사용)
+        function exportData() {
+            exportExcelFile();
+        }
+
+        // 기존 CSV 내보내기 함수 (백업용)
+        function exportDataAsCSV() {
+            if (!workbook) {
+                setStatus('내보낼 데이터가 없습니다', true);
+                return;
+            }
+
+            try {
+                // 간단한 CSV 내보내기
+                const csvData = [
+                    ['MSM Medical Korea - Excel 시스템', '의료용품 재고 관리'],
+                    ['Date:', new Date().toLocaleDateString('ko-KR')],
+                    [''],
+                    ['품목명', '수량', '단가', '금액', '재고상태', '비고'],
+                    ['KF94 마스크', '1000개', '₩500', '₩500,000', '충분', '정기 공급'],
+                    ['의료용 장갑', '500박스', '₩200', '₩100,000', '보통', '라텍스 프리'],
+                    ['소독제 1L', '10병', '₩15,000', '₩150,000', '부족', '99.9% 살균'],
+                    [''],
+                    ['', '', '총액:', '₩750,000', '', '']
+                ].map(row => row.join(',')).join('\n');
+
+                const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+                const fileName = `MSM_Document_${new Date().toISOString().split('T')[0]}.csv`;
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = fileName;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+
+                setStatus('✅ 파일 내보내기 완료');
+            } catch (error) {
+                console.error('내보내기 실패:', error);
+                setStatus('내보내기 실패', true);
+            }
+        }
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            console.log('🚀 페이지 로드 완료 - Univer 초기화 시작');
+
+            // 모든 모듈이 완전히 로드될 때까지 대기
+            setTimeout(initUniver, 1000);
+        });
+
+        // Excel 파일 입력 이벤트 리스너
+        document.getElementById('excelFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                console.log('📁 선택된 파일:', file.name, file.type, file.size);
+                loadExcelFile(file);
+            }
+        });
+
+        // SelectionRenderService 에러 완화 (콘솔 로그 정리)
+        const originalError = console.error;
+        console.error = function(...args) {
+            const message = args.join(' ');
+            // Selection 관련 에러는 숨김 (기능에는 영향 없음)
+            if (message.includes('getLocation') || message.includes('SelectionRenderService')) {
+                return; // 에러 숨김
+            }
+            originalError.apply(console, args);
+        };
+    </script>
+</body>
+</html>

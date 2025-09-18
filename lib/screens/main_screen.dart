@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
+import 'dart:html' as html;
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
@@ -219,8 +220,9 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedMainKey = 'report'; // 분석 리포트를 메인으로
-    _selectedSubKey = 'customer_focused_analytics'; // 고객 중심 분석을 기본으로
+    // 카드 형태 메뉴가 나타나도록 초기값을 비워둠
+    _selectedMainKey = '';
+    _selectedSubKey = '';
   }
 
   // 🤖 자동 테스트를 위한 화면 전환 메서드
@@ -417,18 +419,95 @@ class _MainScreenState extends State<MainScreen> {
 
       // 분석 화면들 임시 제거
       default:
-        return Center(
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.menu, size: 48, color: Colors.grey),
-              SizedBox(height: 12),
+              // 상단 메인 카테고리 카드들
               Text(
-                AppLocalizations.of(context).get('select_menu'),
+                '메인 메뉴',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
                 ),
+              ),
+              SizedBox(height: 16),
+              GridView.count(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                childAspectRatio: 1.5,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                children: [
+                  _buildMenuCard('견적', Icons.receipt_long, Colors.blue, () {
+                    if (kIsWeb) {
+                      html.window.open('http://localhost:50700/univer_html/univer_final_solution.html', '_blank');
+                    } else {
+                      setState(() {
+                        _selectedMainKey = 'order';
+                        _selectedSubKey = 'quote_management';
+                      });
+                    }
+                  }),
+                  _buildMenuCard('주문', Icons.shopping_cart, Colors.green, () {
+                    setState(() {
+                      _selectedMainKey = 'order';
+                      _selectedSubKey = 'order_management';
+                    });
+                  }),
+                  _buildMenuCard('분석', Icons.analytics, Colors.orange, () {
+                    setState(() {
+                      _selectedMainKey = 'report';
+                      _selectedSubKey = 'power_bi_dashboard';
+                    });
+                  }),
+                  _buildMenuCard('기타', Icons.more_horiz, Colors.purple, () {
+                    setState(() {
+                      _selectedMainKey = 'etc';
+                      _selectedSubKey = 'help_all';
+                    });
+                  }),
+                ],
+              ),
+              SizedBox(height: 24),
+              // 하단 세부 기능 카드들
+              Text(
+                '빠른 접근',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              SizedBox(height: 16),
+              GridView.count(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                crossAxisCount: 3,
+                childAspectRatio: 1.2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                children: [
+                  _buildQuickCard('견적_KR', Icons.description, Colors.blue.shade300, () {
+                    setState(() {
+                      _selectedMainKey = 'order';
+                      _selectedSubKey = 'excel_quotation';
+                    });
+                  }),
+                  _buildQuickCard('CI_해외', Icons.public, Colors.green.shade300, () {
+                    setState(() {
+                      _selectedMainKey = 'order';
+                      _selectedSubKey = 'order_management';
+                    });
+                  }),
+                  _buildQuickCard('PI_해외', Icons.inventory, Colors.orange.shade300, () {
+                    setState(() {
+                      _selectedMainKey = 'order';
+                      _selectedSubKey = 'order_list';
+                    });
+                  }),
+                ],
               ),
             ],
           ),
@@ -796,6 +875,79 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  // 메인 메뉴 카드 빌더
+  Widget _buildMenuCard(String title, IconData icon, Color color, VoidCallback onTap) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [color.withOpacity(0.8), color.withOpacity(0.6)],
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 32, color: Colors.white),
+              SizedBox(height: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 빠른 접근 카드 빌더
+  Widget _buildQuickCard(String title, IconData icon, Color color, VoidCallback onTap) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: color.withOpacity(0.1),
+            border: Border.all(color: color.withOpacity(0.3), width: 1),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 24, color: color),
+              SizedBox(height: 4),
+              Text(
+                title,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _MenuButton extends StatefulWidget {
@@ -939,4 +1091,5 @@ class _SideMenu extends StatelessWidget {
       ),
     );
   }
+
 }

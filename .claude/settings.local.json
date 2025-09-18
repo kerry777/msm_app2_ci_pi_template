@@ -180,7 +180,12 @@
       "Bash(start http://localhost/msm/univer_ui_fixed_complete.html)",
       "Bash(start http://localhost/msm/univer_working_copy.html)",
       "Bash(start http://localhost/msm/univer_simple_preset.html)",
-      "Bash(start http://localhost/msm/univer_official_fixed.html)"
+      "Bash(start http://localhost/msm/univer_official_fixed.html)",
+      "WebFetch(domain:unpkg.com)",
+      "WebFetch(domain:app.unpkg.com)",
+      "mcp__ide__getDiagnostics",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(echo:*)"
     ],
     "deny": []
   }

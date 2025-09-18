@@ -40,7 +40,7 @@ class _UniverExcelViewerScreenState extends State<UniverExcelViewerScreen> {
       _iframeId,
       (int viewId) {
         final iframe = html.IFrameElement()
-          ..src = 'assets/univer/index.html'
+          ..src = 'http://localhost/msm/univer_final_solution.html'
           ..style.border = 'none'
           ..style.width = '100%'
           ..style.height = '100%'
@@ -107,7 +107,7 @@ class _UniverExcelViewerScreenState extends State<UniverExcelViewerScreen> {
           },
         ),
       )
-      ..loadFlutterAsset('assets/univer/index.html');
+      ..loadRequest(Uri.parse('http://localhost/msm/univer_final_solution.html'));
   }
 
   void _handleWebViewMessage(String message) {
@@ -157,7 +157,7 @@ class _UniverExcelViewerScreenState extends State<UniverExcelViewerScreen> {
         _status = 'Excel 파일 로드 중...';
       });
 
-      await _controller.runJavaScript('''
+      await _controller?.runJavaScript('''
         window.postMessage({
           action: 'loadExcel',
           data: { filePath: '$filePath' }
@@ -178,7 +178,7 @@ class _UniverExcelViewerScreenState extends State<UniverExcelViewerScreen> {
     }
 
     try {
-      await _controller.runJavaScript('''
+      await _controller?.runJavaScript('''
         window.postMessage({
           action: 'exportPDF'
         }, '*');
@@ -190,7 +190,7 @@ class _UniverExcelViewerScreenState extends State<UniverExcelViewerScreen> {
 
   Future<void> _pingWebView() async {
     try {
-      await _controller.runJavaScript('''
+      await _controller?.runJavaScript('''
         window.postMessage({
           action: 'ping'
         }, '*');
@@ -220,7 +220,7 @@ class _UniverExcelViewerScreenState extends State<UniverExcelViewerScreen> {
             icon: const Icon(Icons.refresh),
             tooltip: '새로고침',
             onPressed: () {
-              _controller.reload();
+              _controller?.reload();
               setState(() {
                 _isReady = false;
                 _status = '새로고침 중...';
@@ -303,7 +303,7 @@ class _UniverExcelViewerScreenState extends State<UniverExcelViewerScreen> {
           ),
           // WebView
           Expanded(
-            child: WebViewWidget(controller: _controller),
+            child: _controller != null ? WebViewWidget(controller: _controller!) : const Center(child: CircularProgressIndicator()),
           ),
         ],
       ),
