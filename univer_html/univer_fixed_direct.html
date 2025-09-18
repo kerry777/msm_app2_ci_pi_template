@@ -172,9 +172,9 @@
 
                 const { createUniver, LocaleType, UniverInstanceType } = UniverCore;
 
-                // Univer 인스턴스 생성
+                // Univer 인스턴스 생성 - 한국 시스템이므로 영어 사용
                 const univer = createUniver({
-                    locale: LocaleType.ZH_CN,
+                    locale: 'en-US',
                     theme: 'default'
                 });
 
@@ -219,7 +219,7 @@
                 // 워크북 데이터 생성
                 const workbookData = {
                     id: 'msm-workbook',
-                    locale: LocaleType.ZH_CN,
+                    locale: 'en-US',
                     name: 'MSM Excel Workbook',
                     sheetOrder: ['sheet-01'],
                     sheets: {
@@ -272,7 +272,7 @@
                 };
 
                 // 워크북 생성
-                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, workbookData);
+                const workbook = univer.createUnit(UniverCore.UniverInstanceType.UNIVER_SHEET, workbookData);
                 console.log('✅ 워크북 생성 완료:', workbook);
 
                 setStatus('✅ MSM Excel 뷰어 준비 완료!');
