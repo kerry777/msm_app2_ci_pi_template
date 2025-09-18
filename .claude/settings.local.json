@@ -199,7 +199,11 @@
       "Bash(start http://localhost/msm/univer_with_deps.html)",
       "Bash(start http://localhost/msm/check_dom.html)",
       "Bash(q)",
-      "Bash(start http://localhost:50580/univer_final_solution.html)"
+      "Bash(start http://localhost:50580/univer_final_solution.html)",
+      "Bash(start http://localhost:50580/univer_fixed_direct.html)",
+      "Bash(start http://localhost:50580/univer_working_simple.html)",
+      "Bash(start http://localhost:58000)",
+      "Bash(start http://localhost:50580/test_result_auto.html)"
     ],
     "deny": []
   }

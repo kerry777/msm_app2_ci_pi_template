@@ -175,33 +175,55 @@
                 setStatus('📊 워크북 생성 중...');
 
                 const workbookData = {
-                    id: 'workbook-01',
+                    id: 'msm-workbook',
                     locale: LocaleType.ZH_CN,
                     name: 'MSM Excel Workbook',
                     sheetOrder: ['sheet-01'],
                     sheets: {
                         'sheet-01': {
                             id: 'sheet-01',
-                            name: 'Sheet1',
+                            name: 'MSM 데이터',
                             cellData: {
                                 0: {
-                                    0: { v: 'Hello' },
-                                    1: { v: 'World' },
-                                    2: { v: 'MSM' }
+                                    0: { v: '품목코드' },
+                                    1: { v: '품목명' },
+                                    2: { v: '수량' },
+                                    3: { v: '단가' },
+                                    4: { v: '금액' }
                                 },
                                 1: {
-                                    0: { v: '안녕하세요' },
-                                    1: { v: 'Univer' },
-                                    2: { v: 'Excel' }
+                                    0: { v: 'A001' },
+                                    1: { v: '의료기기 A' },
+                                    2: { v: 10 },
+                                    3: { v: 50000 },
+                                    4: { v: 500000 }
                                 },
                                 2: {
-                                    0: { v: 'A1' },
-                                    1: { v: 'B1' },
-                                    2: { v: 'C1' }
+                                    0: { v: 'B002' },
+                                    1: { v: '의료기기 B' },
+                                    2: { v: 5 },
+                                    3: { v: 80000 },
+                                    4: { v: 400000 }
+                                },
+                                3: {
+                                    0: { v: 'C003' },
+                                    1: { v: '의료기기 C' },
+                                    2: { v: 8 },
+                                    3: { v: 30000 },
+                                    4: { v: 240000 }
+                                },
+                                4: {
+                                    0: { v: '' },
+                                    1: { v: '합계' },
+                                    2: { v: 23 },
+                                    3: { v: '' },
+                                    4: { v: 1140000 }
                                 }
                             },
-                            rowCount: 50,
-                            columnCount: 20
+                            rowCount: 100,
+                            columnCount: 20,
+                            defaultRowHeight: 25,
+                            defaultColumnWidth: 100
                         }
                     }
                 };
