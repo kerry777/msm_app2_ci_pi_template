@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MSM Excel - Univer Minimal (V2 Robust)</title>
+  <style>
+    html, body, #app { height: 100%; margin: 0; }
+    #app { display: flex; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- 1) UMD 번들: 동일 버전으로 통일하여 먼저 로드하세요 -->
+  <!-- 버전은 환경에 맞게 통일 (아래는 예시) -->
+  <script src="https://unpkg.com/@univerjs/core@0.2.13/dist/umd/univer.core.min.js"></script>
+  <script src="https://unpkg.com/@univerjs/sheets@0.2.13/dist/umd/univer.sheets.min.js"></script>
+  <script src="https://unpkg.com/@univerjs/sheets-ui@0.2.13/dist/umd/univer.sheets-ui.min.js"></script>
+
+  <!-- (선택) 여러분의 로그/유틸 -->
+  <script src="content.js"></script>
+
+  <!-- 2) 강건한 초기화 스크립트 -->
+  <script src="index.js"></script>
+</body>
+</html>

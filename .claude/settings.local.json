@@ -169,7 +169,13 @@
       "Bash(start http://localhost:50570/univer_working_version_test.html)",
       "Bash(start http://localhost/msm/univer_working_solution_fixed.html)",
       "Bash(start http://localhost/msm/dashboard.html)",
-      "Bash(start http://localhost/msm/univer_simple_test.html)"
+      "Bash(start http://localhost/msm/univer_simple_test.html)",
+      "Bash(start http://localhost/msm/univer_full_complete.html)",
+      "Bash(start http://localhost/msm/msm_excel_viewer_basic.html)",
+      "Bash(start http://localhost/msm/univer_simple_working.html)",
+      "Bash(start http://localhost/msm/univer_gpt_fixed.html)",
+      "Bash(start http://localhost/msm/univer_official_umd.html)",
+      "Bash(start http://localhost/msm/univer_working_fixed.html)"
     ],
     "deny": []
   }
