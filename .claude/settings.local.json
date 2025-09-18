@@ -175,7 +175,8 @@
       "Bash(start http://localhost/msm/univer_simple_working.html)",
       "Bash(start http://localhost/msm/univer_gpt_fixed.html)",
       "Bash(start http://localhost/msm/univer_official_umd.html)",
-      "Bash(start http://localhost/msm/univer_working_fixed.html)"
+      "Bash(start http://localhost/msm/univer_working_fixed.html)",
+      "Bash(start http://localhost/msm/univer_official_umd_preset.html)"
     ],
     "deny": []
   }
