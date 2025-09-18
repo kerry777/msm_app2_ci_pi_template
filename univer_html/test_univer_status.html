@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer 상태 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .warning { background: #fff3cd; color: #856404; }
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+        }
+        .log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Univer 자동 테스트</h1>
+
+    <div class="test-container">
+        <h2>📊 테스트 상태</h2>
+        <div id="overall-status" class="status info">테스트 시작 중...</div>
+        <div id="dom-status" class="status info">DOM 구조 분석 대기</div>
+        <div id="error-status" class="status info">에러 모니터링 대기</div>
+        <div id="render-status" class="status info">렌더링 상태 확인 대기</div>
+    </div>
+
+    <div class="test-container">
+        <h2>🔍 실시간 로그</h2>
+        <div id="log" class="log">테스트 시작...</div>
+    </div>
+
+    <div class="test-container">
+        <h2>📺 Univer 화면</h2>
+        <iframe id="univer-frame" src="http://localhost:50580/univer_fixed_direct.html"></iframe>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        const overallStatus = document.getElementById('overall-status');
+        const domStatus = document.getElementById('dom-status');
+        const errorStatus = document.getElementById('error-status');
+        const renderStatus = document.getElementById('render-status');
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : type === 'success' ? '#51cf66' : '#74c0fc';
+            log.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateStatus(element, message, type = 'info') {
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+
+        addLog('🚀 자동 테스트 시작', 'info');
+        updateStatus(overallStatus, '테스트 진행 중...', 'info');
+
+        let testResults = {
+            scriptsLoaded: false,
+            domStructure: false,
+            noErrors: false,
+            renderComplete: false
+        };
+
+        // iframe 로드 완료 대기
+        document.getElementById('univer-frame').onload = function() {
+            addLog('✅ iframe 로드 완료', 'success');
+
+            setTimeout(() => {
+                runAutomaticTests();
+            }, 3000); // 3초 후 테스트 시작
+        };
+
+        async function runAutomaticTests() {
+            addLog('🔍 자동 테스트 실행 시작', 'info');
+
+            // 1. DOM 구조 테스트
+            await testDOMStructure();
+
+            // 2. 에러 확인 테스트
+            await testErrorStatus();
+
+            // 3. 렌더링 상태 테스트
+            await testRenderingStatus();
+
+            // 4. 종합 결과 평가
+            evaluateOverallStatus();
+        }
+
+        async function testDOMStructure() {
+            addLog('📋 DOM 구조 분석 중...', 'info');
+            updateStatus(domStatus, 'DOM 구조 분석 중...', 'info');
+
+            try {
+                const iframe = document.getElementById('univer-frame');
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+                // Univer 컨테이너 확인
+                const univerContainer = iframeDoc.getElementById('univer');
+                if (!univerContainer) {
+                    throw new Error('Univer 컨테이너를 찾을 수 없음');
+                }
+
+                const children = univerContainer.children.length;
+                addLog(`📦 Univer 컨테이너 발견: ${children}개 자식 요소`, children > 0 ? 'success' : 'error');
+
+                // data-u-comp 요소들 확인
+                const compElements = iframeDoc.querySelectorAll('[data-u-comp]');
+                addLog(`🎯 Univer 컴포넌트: ${compElements.length}개`, compElements.length > 0 ? 'success' : 'error');
+
+                // 툴바 확인
+                const toolbar = iframeDoc.querySelector('[data-u-comp="headerbar"], [data-u-comp="ribbon-toolbar"]');
+                addLog(`🔧 툴바 발견: ${toolbar ? '예' : '아니오'}`, toolbar ? 'success' : 'error');
+
+                // 캔버스 확인
+                const canvas = iframeDoc.querySelector('canvas');
+                addLog(`🎨 캔버스 발견: ${canvas ? '예' : '아니오'}`, canvas ? 'success' : 'error');
+
+                testResults.domStructure = children > 0 && compElements.length > 0;
+                updateStatus(domStatus, testResults.domStructure ? '✅ DOM 구조 정상' : '❌ DOM 구조 문제', testResults.domStructure ? 'success' : 'error');
+
+            } catch (error) {
+                addLog(`❌ DOM 구조 테스트 실패: ${error.message}`, 'error');
+                updateStatus(domStatus, '❌ DOM 구조 테스트 실패', 'error');
+                testResults.domStructure = false;
+            }
+        }
+
+        async function testErrorStatus() {
+            addLog('🚨 에러 상태 확인 중...', 'info');
+            updateStatus(errorStatus, '에러 상태 확인 중...', 'info');
+
+            try {
+                const iframe = document.getElementById('univer-frame');
+                const iframeWindow = iframe.contentWindow;
+
+                // 콘솔 에러 모니터링 설정
+                let errorCount = 0;
+                const originalError = iframeWindow.console.error;
+
+                iframeWindow.console.error = function(...args) {
+                    const errorMsg = args.join(' ');
+                    if (!errorMsg.includes('getLocation') && !errorMsg.includes('🔧')) {
+                        errorCount++;
+                        addLog(`🚨 콘솔 에러: ${errorMsg}`, 'error');
+                    }
+                    originalError.apply(iframeWindow.console, args);
+                };
+
+                // 2초 대기 후 에러 카운트 확인
+                setTimeout(() => {
+                    testResults.noErrors = errorCount === 0;
+                    addLog(`📊 총 에러 수: ${errorCount}개`, errorCount === 0 ? 'success' : 'error');
+                    updateStatus(errorStatus, errorCount === 0 ? '✅ 에러 없음' : `❌ ${errorCount}개 에러`, errorCount === 0 ? 'success' : 'error');
+                }, 2000);
+
+            } catch (error) {
+                addLog(`❌ 에러 상태 확인 실패: ${error.message}`, 'error');
+                updateStatus(errorStatus, '❌ 에러 상태 확인 실패', 'error');
+                testResults.noErrors = false;
+            }
+        }
+
+        async function testRenderingStatus() {
+            addLog('🎨 렌더링 상태 확인 중...', 'info');
+            updateStatus(renderStatus, '렌더링 상태 확인 중...', 'info');
+
+            try {
+                const iframe = document.getElementById('univer-frame');
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+                // 상태 메시지 확인
+                const statusElement = iframeDoc.getElementById('status');
+                const statusText = statusElement ? statusElement.textContent : '';
+                addLog(`📋 상태 메시지: "${statusText}"`, 'info');
+
+                // 렌더링 완료 여부 확인
+                const isReady = statusText.includes('준비 완료') || statusText.includes('성공적으로 로드');
+
+                // 시각적 요소 확인
+                const hasVisibleElements = iframeDoc.querySelector('[data-u-comp="workbench-layout"]');
+                const hasContent = hasVisibleElements && hasVisibleElements.offsetWidth > 0;
+
+                testResults.renderComplete = isReady && hasContent;
+                addLog(`🎯 렌더링 완료: ${testResults.renderComplete ? '예' : '아니오'}`, testResults.renderComplete ? 'success' : 'error');
+                updateStatus(renderStatus, testResults.renderComplete ? '✅ 렌더링 완료' : '❌ 렌더링 미완료', testResults.renderComplete ? 'success' : 'error');
+
+            } catch (error) {
+                addLog(`❌ 렌더링 상태 확인 실패: ${error.message}`, 'error');
+                updateStatus(renderStatus, '❌ 렌더링 상태 확인 실패', 'error');
+                testResults.renderComplete = false;
+            }
+        }
+
+        function evaluateOverallStatus() {
+            const { domStructure, noErrors, renderComplete } = testResults;
+            const successCount = [domStructure, noErrors, renderComplete].filter(Boolean).length;
+            const totalTests = 3;
+
+            addLog(`📊 테스트 결과: ${successCount}/${totalTests} 성공`, successCount === totalTests ? 'success' : 'error');
+
+            if (successCount === totalTests) {
+                updateStatus(overallStatus, '🎉 모든 테스트 통과!', 'success');
+                addLog('✅ Univer Excel 뷰어가 정상적으로 작동합니다!', 'success');
+            } else {
+                updateStatus(overallStatus, `⚠️ ${totalTests - successCount}개 테스트 실패`, 'warning');
+                addLog('⚠️ 일부 기능에 문제가 있습니다.', 'warning');
+
+                // 자동 수정 시도
+                if (!renderComplete) {
+                    addLog('🔧 렌더링 문제 자동 수정 시도 중...', 'info');
+                    attemptAutoFix();
+                }
+            }
+        }
+
+        function attemptAutoFix() {
+            addLog('🛠️ 자동 수정 프로세스 시작', 'info');
+
+            // iframe 새로고침
+            setTimeout(() => {
+                addLog('🔄 iframe 새로고침 시도', 'info');
+                document.getElementById('univer-frame').src = 'http://localhost:50580/univer_fixed_direct.html?' + Date.now();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

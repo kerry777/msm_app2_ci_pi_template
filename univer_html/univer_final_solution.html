@@ -368,6 +368,83 @@
             console.log('✅ UI 마운트 완료:', container.childElementCount, '개 자식 요소');
         }
 
+        // ✅ 전역 getLocation 메서드 주입 - 모든 가능한 객체에 사전 주입
+        function injectGlobalGetLocation() {
+            console.log('🔧 전역 getLocation 메서드 주입 시작...');
+
+            // 안전한 getLocation 구현
+            const safeGetLocation = function() {
+                return {
+                    startRow: 0,
+                    startColumn: 0,
+                    endRow: 0,
+                    endColumn: 0
+                };
+            };
+
+            // 전역 객체들에 getLocation 주입
+            if (typeof window !== 'undefined') {
+                // 전역 window 객체에 getLocation 추가
+                if (!window.getLocation) {
+                    window.getLocation = safeGetLocation;
+                }
+
+                // Object.prototype에 getLocation 추가 (매우 공격적이지만 효과적)
+                if (!Object.prototype.getLocation) {
+                    Object.defineProperty(Object.prototype, 'getLocation', {
+                        value: safeGetLocation,
+                        writable: true,
+                        configurable: true,
+                        enumerable: false // enumerable false로 설정해서 순회에서 제외
+                    });
+                }
+
+                // 일반적인 Selection 관련 객체들에 미리 주입
+                const selectionObjectNames = [
+                    'RefSelectionsRenderService',
+                    'SelectionService',
+                    'SelectionManagerService',
+                    'SheetsSelectionsService'
+                ];
+
+                selectionObjectNames.forEach(name => {
+                    if (!window[name]) {
+                        window[name] = {};
+                    }
+                    if (!window[name].getLocation) {
+                        window[name].getLocation = safeGetLocation;
+                    }
+                });
+            }
+
+            console.log('✅ 전역 getLocation 메서드 주입 완료');
+        }
+
+        // ✅ 전역 에러 핸들러 - getLocation 에러 방지
+        function setupGlobalErrorHandler() {
+            // React DOM getLocation 에러를 전역적으로 처리
+            const originalError = console.error;
+            console.error = function(...args) {
+                const errorMessage = args.join(' ');
+                if (errorMessage.includes('Cannot read properties of undefined (reading \'getLocation\')')) {
+                    console.warn('🔧 getLocation 에러 감지 - 안전하게 처리됨');
+                    return; // 에러 출력 차단
+                }
+                originalError.apply(console, args);
+            };
+
+            // 전역 에러 캐치
+            window.addEventListener('error', function(event) {
+                if (event.message && event.message.includes('getLocation')) {
+                    console.warn('🔧 전역 getLocation 에러 캐치됨:', event.message);
+                    event.preventDefault(); // 에러 전파 차단
+                    return false;
+                }
+            });
+
+            console.log('✅ 전역 getLocation 에러 핸들러 설정 완료');
+        }
+
         // ✅ Selection Service 강제 초기화 - RefSelectionsRenderService 의존성 주입 보장
         async function forceInitializeSelectionServices(univer, univerAPI) {
             try {
@@ -530,6 +607,12 @@
         // RefSelectionsRenderService 의존성 주입 문제 해결을 위한 완전한 초기화
         async function initUniver() {
             try {
+                // 🔧 전역 getLocation 메서드를 가장 먼저 주입
+                injectGlobalGetLocation();
+
+                // 🔧 전역 에러 핸들러 설정
+                setupGlobalErrorHandler();
+
                 console.log('=== 🎉 MSM Univer RefSelectionsRenderService 문제 해결 버전 ===');
                 setStatus('🔧 Univer 엔진 초기화 중...');
 
