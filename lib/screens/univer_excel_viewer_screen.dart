@@ -40,7 +40,7 @@ class _UniverExcelViewerScreenState extends State<UniverExcelViewerScreen> {
       _iframeId,
       (int viewId) {
         final iframe = html.IFrameElement()
-          ..src = 'http://localhost/msm/univer_final_solution.html'
+          ..src = 'http://localhost:50580/univer_final_solution.html'
           ..style.border = 'none'
           ..style.width = '100%'
           ..style.height = '100%'
@@ -107,7 +107,7 @@ class _UniverExcelViewerScreenState extends State<UniverExcelViewerScreen> {
           },
         ),
       )
-      ..loadRequest(Uri.parse('http://localhost/msm/univer_final_solution.html'));
+      ..loadRequest(Uri.parse('http://localhost:50580/univer_final_solution.html'));
   }
 
   void _handleWebViewMessage(String message) {

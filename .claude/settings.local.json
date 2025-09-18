@@ -185,7 +185,21 @@
       "WebFetch(domain:app.unpkg.com)",
       "mcp__ide__getDiagnostics",
       "WebFetch(domain:www.npmjs.com)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(for port in 35000 35001 35002 36000 37000 38000 39000 40000 41000 42000 43000 44000 45000)",
+      "Bash(break)",
+      "Bash(start http://localhost/msm/univer_final_solution_fixed.html)",
+      "Bash(start http://localhost/msm/univer_working_stable.html)",
+      "Bash(start http://localhost/msm/simple_excel.html)",
+      "Bash(start http://localhost/msm/univer_fixed_final.html)",
+      "Bash(start http://localhost/msm/univer_test.fixed.html)",
+      "Bash(start http://localhost/msm/univer_debug.html)",
+      "Bash(start http://localhost/msm/univer_working_final.html)",
+      "Bash(start http://localhost/msm/univer_direct_cdn.html)",
+      "Bash(start http://localhost/msm/univer_with_deps.html)",
+      "Bash(start http://localhost/msm/check_dom.html)",
+      "Bash(q)",
+      "Bash(start http://localhost:50580/univer_final_solution.html)"
     ],
     "deny": []
   }

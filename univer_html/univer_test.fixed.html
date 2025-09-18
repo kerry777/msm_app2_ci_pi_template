@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer 테스트 - 최소 구현</title>
+
+    <!-- 필수 의존성 (공식 문서 순서) -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/rxjs/dist/bundles/rxjs.umd.min.js"></script>
+
+    <!-- Univer Presets (올바른 CDN) -->
+    <script src="https://unpkg.com/@univerjs/presets/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/locales/en-US.js"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core/lib/index.css" />
+
+    <style>
+        body {
+            margin: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        #univer {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .controls {
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 8px 16px;
+            margin: 0 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <h1>Univer 테스트 - 최소 구현</h1>
+
+    <div id="status" class="status info">초기화 중...</div>
+
+    <div class="controls">
+        <button onclick="testCreateWorkbook()">워크북 생성 테스트</button>
+        <button onclick="testAddData()">데이터 추가 테스트</button>
+        <button onclick="debugInfo()">디버그 정보</button>
+    </div>
+
+    <div id="univer"></div>
+
+    <script>
+        let univer = null;
+        let univerAPI = null;
+        let workbook = null;
+
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        async function initUniver() {
+            try {
+                updateStatus('Univer 초기화 시작...', 'info');
+
+                // 전역 객체 확인
+                console.log('전역 Univer 객체들:', Object.keys(window).filter(key => key.includes('Univer')));
+
+                if (!window.UniverPresets) {
+                    throw new Error('UniverPresets가 로드되지 않았습니다');
+                }
+
+                if (!window.UniverPresetSheetsCore) {
+                    throw new Error('UniverPresetSheetsCore가 로드되지 않았습니다');
+                }
+
+                const { createUniver } = window.UniverPresets;
+                const { UniverSheetsCorePreset } = window.UniverPresetSheetsCore;
+                const localeEnUS = window.UniverPresetSheetsCoreEnUS;
+
+                console.log('createUniver:', typeof createUniver);
+                console.log('UniverSheetsCorePreset:', typeof UniverSheetsCorePreset);
+                console.log('localeEnUS:', typeof localeEnUS);
+
+                const container = document.getElementById('univer');
+
+                updateStatus('Univer 인스턴스 생성 중...', 'info');
+
+                const result = createUniver({
+                    locale: 'en-US',
+                    locales: localeEnUS ? { 'en-US': localeEnUS } : {},
+                    presets: [
+                        UniverSheetsCorePreset({
+                            container: container
+                        })
+                    ]
+                });
+
+                univer = result.univer;
+                univerAPI = result.univerAPI;
+
+                if (!univer || !univerAPI) {
+                    throw new Error('Univer 인스턴스 생성 실패');
+                }
+
+                // UI 렌더링 대기
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                updateStatus('Univer 초기화 완료!', 'success');
+
+            } catch (error) {
+                console.error('초기화 실패:', error);
+                updateStatus(`초기화 실패: ${error.message}`, 'error');
+            }
+        }
+
+        function testCreateWorkbook() {
+            try {
+                if (!univerAPI) {
+                    updateStatus('Univer API가 준비되지 않았습니다', 'error');
+                    return;
+                }
+
+                workbook = univerAPI.createWorkbook({
+                    name: '테스트 워크북',
+                    sheets: [{
+                        name: '테스트 시트',
+                        cellData: {
+                            0: {
+                                0: { v: 'Hello' },
+                                1: { v: 'World' }
+                            },
+                            1: {
+                                0: { v: '안녕' },
+                                1: { v: '세계' }
+                            }
+                        }
+                    }]
+                });
+
+                updateStatus('워크북 생성 완료!', 'success');
+                console.log('생성된 워크북:', workbook);
+
+            } catch (error) {
+                console.error('워크북 생성 실패:', error);
+                updateStatus(`워크북 생성 실패: ${error.message}`, 'error');
+            }
+        }
+
+        function testAddData() {
+            try {
+                if (!workbook) {
+                    updateStatus('먼저 워크북을 생성하세요', 'error');
+                    return;
+                }
+
+                // 간단한 데이터 추가 테스트
+                const activeSheet = workbook.getActiveSheet();
+                if (activeSheet) {
+                    updateStatus('데이터 추가 테스트 완료!', 'success');
+                    console.log('활성 시트:', activeSheet.getName());
+                } else {
+                    updateStatus('활성 시트를 찾을 수 없습니다', 'error');
+                }
+
+            } catch (error) {
+                console.error('데이터 추가 실패:', error);
+                updateStatus(`데이터 추가 실패: ${error.message}`, 'error');
+            }
+        }
+
+        function debugInfo() {
+            console.log('=== 디버그 정보 ===');
+            console.log('univer:', univer);
+            console.log('univerAPI:', univerAPI);
+            console.log('workbook:', workbook);
+
+            if (univerAPI) {
+                console.log('univerAPI 메서드들:', Object.keys(univerAPI));
+            }
+
+            const container = document.getElementById('univer');
+            console.log('컨테이너 크기:', container.offsetWidth, 'x', container.offsetHeight);
+            console.log('컨테이너 자식 수:', container.childElementCount);
+
+            updateStatus('디버그 정보가 콘솔에 출력되었습니다', 'info');
+        }
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            console.log('페이지 로드 완료');
+            setTimeout(initUniver, 500);
+        });
+    </script>
+</body>
+</html>

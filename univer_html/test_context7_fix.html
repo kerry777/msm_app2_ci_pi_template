@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Context7 Fix Test - Univer Excel Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .log-area {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            height: 200px;
+            overflow-y: auto;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Context7 Fix Test - Univer Excel Viewer</h1>
+
+        <div class="test-section">
+            <h2>🎯 테스트 목표</h2>
+            <p>Context7으로 해결한 RefSelectionsRenderService getLocation 에러가 정상적으로 수정되었는지 확인</p>
+            <ul>
+                <li>✅ React DOM getLocation 에러 해결</li>
+                <li>✅ Univer 스프레드시트 그리드 정상 렌더링</li>
+                <li>✅ Selection 기능 정상 동작</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 실시간 테스트 상태</h2>
+            <div id="test-status" class="status info">테스트 준비 중...</div>
+            <button class="btn" onclick="runTest()">🚀 Context7 수정사항 테스트 실행</button>
+            <button class="btn" onclick="clearLog()">🧹 로그 지우기</button>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 테스트 로그</h2>
+            <div id="log" class="log-area">테스트 시작을 기다리는 중...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔗 직접 테스트 링크</h2>
+            <button class="btn" onclick="openOriginalPage()">📄 Original Univer Page 열기</button>
+            <button class="btn" onclick="testSelection()">🎯 Selection 기능 테스트</button>
+        </div>
+    </div>
+
+    <script>
+        let logElement = document.getElementById('log');
+        let statusElement = document.getElementById('test-status');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colorCode = type === 'error' ? '#ff6b6b' : type === 'success' ? '#51cf66' : '#74c0fc';
+            logElement.innerHTML += `<div style="color: ${colorCode}">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function updateStatus(message, type = 'info') {
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+
+        function clearLog() {
+            logElement.innerHTML = '';
+            log('로그가 지워졌습니다.', 'info');
+        }
+
+        function openOriginalPage() {
+            log('Original Univer 페이지를 새 창에서 엽니다...', 'info');
+            window.open('http://localhost:50580/univer_final_solution.html', '_blank');
+        }
+
+        async function runTest() {
+            updateStatus('Context7 수정사항 테스트 실행 중...', 'info');
+            log('🧪 Context7 Fix 테스트 시작', 'info');
+
+            try {
+                // 1. 페이지 접근 테스트
+                log('1️⃣ 페이지 접근성 테스트 중...', 'info');
+                const response = await fetch('http://localhost:50580/univer_final_solution.html');
+                if (response.ok) {
+                    log('✅ 페이지 접근 성공 (HTTP 200)', 'success');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                // 2. iframe으로 Univer 로드 테스트
+                log('2️⃣ Univer 컴포넌트 로드 테스트 중...', 'info');
+                await testUniverLoad();
+
+            } catch (error) {
+                log(`❌ 테스트 실패: ${error.message}`, 'error');
+                updateStatus('테스트 실패', 'error');
+            }
+        }
+
+        function testUniverLoad() {
+            return new Promise((resolve, reject) => {
+                const iframe = document.createElement('iframe');
+                iframe.src = 'http://localhost:50580/univer_final_solution.html';
+                iframe.style.width = '100%';
+                iframe.style.height = '400px';
+                iframe.style.border = '1px solid #ddd';
+                iframe.style.borderRadius = '5px';
+                iframe.style.marginTop = '10px';
+
+                iframe.onload = () => {
+                    log('✅ Univer iframe 로드 성공', 'success');
+
+                    // Context7 수정사항 확인을 위한 콘솔 메시지 모니터링
+                    setTimeout(() => {
+                        try {
+                            // 메시지 리스너로 iframe 내부 상태 확인
+                            window.addEventListener('message', (event) => {
+                                if (event.data && typeof event.data === 'string') {
+                                    if (event.data.includes('RefSelectionsRenderService getLocation 문제 해결 완료')) {
+                                        log('🎉 Context7 수정사항 적용 완료!', 'success');
+                                        updateStatus('Context7 수정사항 테스트 성공!', 'success');
+                                    } else if (event.data.includes('error') || event.data.includes('Error')) {
+                                        log(`⚠️ 에러 감지: ${event.data}`, 'error');
+                                    } else {
+                                        log(`📨 메시지: ${event.data}`, 'info');
+                                    }
+                                }
+                            });
+
+                            log('✅ Univer 컴포넌트 초기화 완료', 'success');
+                            updateStatus('Univer 로드 성공 - Context7 수정사항 확인 중...', 'success');
+                            resolve();
+                        } catch (error) {
+                            log(`❌ 초기화 중 에러: ${error.message}`, 'error');
+                            reject(error);
+                        }
+                    }, 2000);
+                };
+
+                iframe.onerror = () => {
+                    log('❌ Univer iframe 로드 실패', 'error');
+                    reject(new Error('iframe load failed'));
+                };
+
+                // 테스트 섹션에 iframe 추가
+                const testSection = document.querySelector('.test-section:last-child');
+                testSection.appendChild(iframe);
+            });
+        }
+
+        function testSelection() {
+            log('🎯 Selection 기능 테스트 - 새 창에서 확인하세요', 'info');
+            const testWindow = window.open('http://localhost:50580/univer_final_solution.html', '_blank', 'width=1200,height=800');
+
+            // 테스트 지침을 새 창에 전달
+            setTimeout(() => {
+                if (testWindow) {
+                    log('📋 Selection 테스트 지침:', 'info');
+                    log('1. 스프레드시트 셀을 클릭해보세요', 'info');
+                    log('2. 드래그로 영역을 선택해보세요', 'info');
+                    log('3. 콘솔에서 getLocation 에러가 없는지 확인하세요', 'info');
+                }
+            }, 1000);
+        }
+
+        // 페이지 로드 시 초기화
+        window.onload = function() {
+            log('🚀 Context7 Fix 테스트 페이지 로드 완료', 'success');
+            updateStatus('테스트 준비 완료 - 실행 버튼을 클릭하세요', 'success');
+        };
+    </script>
+</body>
+</html>

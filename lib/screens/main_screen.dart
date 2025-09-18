@@ -443,7 +443,7 @@ class _MainScreenState extends State<MainScreen> {
                 children: [
                   _buildMenuCard('견적', Icons.receipt_long, Colors.blue, () {
                     if (kIsWeb) {
-                      html.window.open('http://localhost:50700/univer_html/univer_final_solution.html', '_blank');
+                      html.window.location.href = '/univer_final_solution.html';
                     } else {
                       setState(() {
                         _selectedMainKey = 'order';

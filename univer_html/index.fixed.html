@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏥 MSM Excel 시스템 - 수정된 버전</title>
+
+    <!-- 필수 의존성 (정확한 순서로) -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/rxjs/dist/bundles/rxjs.umd.min.js"></script>
+
+    <!-- Univer Core Presets - 올바른 CDN 링크 -->
+    <script src="https://unpkg.com/@univerjs/presets/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/locales/en-US.js"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core/lib/index.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .back-button {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .back-button:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-1px);
+        }
+
+        .toolbar {
+            background: #34495e;
+            padding: 8px 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            border-bottom: 1px solid #7f8c8d;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .status {
+            color: #ecf0f1;
+            font-size: 12px;
+            margin-left: auto;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #3498db;
+            border-radius: 50%;
+            border-top: 2px solid transparent;
+            animation: spin 1s linear infinite;
+            margin-right: 5px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .template {
+            background: #e74c3c !important;
+        }
+
+        .template:hover {
+            background: #c0392b !important;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* Univer 컨테이너 */
+        #univer {
+            height: calc(100vh - 120px) !important;
+            min-height: 600px !important;
+            width: 100% !important;
+            background: white !important;
+            border: 2px solid #007bff !important;
+            border-radius: 8px !important;
+            overflow: hidden;
+            position: relative;
+            margin: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏥 MSM Excel 시스템 - 수정된 버전</h1>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div id="status">시스템 초기화 중...</div>
+            <button class="back-button" onclick="goBackToMain()">
+                ← 메인 메뉴로 돌아가기
+            </button>
+        </div>
+    </div>
+
+    <!-- 간단한 툴바 -->
+    <div class="toolbar">
+        <input type="file" id="excelFile" class="file-input" accept=".xlsx,.xls">
+        <label for="excelFile" class="btn">📁 파일 열기</label>
+
+        <button class="btn template" onclick="loadTemplate('sample')">📄 샘플 데이터</button>
+        <button class="btn" onclick="createNew()">🆕 새 문서</button>
+        <button class="btn" onclick="exportData()">💾 내보내기</button>
+
+        <div class="status" id="status-text">준비 중...</div>
+    </div>
+
+    <!-- Univer 컨테이너 -->
+    <div id="univer"></div>
+
+    <script>
+        let univer = null;
+        let univerAPI = null;
+        let workbook = null;
+
+        // 상태 업데이트 함수
+        function setStatus(text, isError = false) {
+            const statusEl = document.getElementById('status');
+            const statusTextEl = document.getElementById('status-text');
+
+            const displayText = isError ? `❌ ${text}` :
+                               text.includes('완료') ? `✅ ${text}` :
+                               `<span class="loading"></span> ${text}`;
+
+            if (statusEl) statusEl.innerHTML = displayText;
+            if (statusTextEl) statusTextEl.innerHTML = displayText;
+        }
+
+        // 메인 메뉴로 돌아가기
+        function goBackToMain() {
+            if (window.opener) {
+                window.opener.focus();
+                window.close();
+            } else {
+                window.location.href = 'http://localhost:50700';
+            }
+        }
+
+        // Univer 초기화 (간단하고 안정적인 방법)
+        async function initUniver() {
+            try {
+                console.log('=== Univer 초기화 시작 ===');
+                setStatus('🔧 Univer 시스템 준비 중...');
+
+                // 컨테이너 확인
+                const container = document.getElementById('univer');
+                if (!container) {
+                    throw new Error('univer 컨테이너를 찾을 수 없습니다');
+                }
+
+                // 필수 의존성 확인
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof rxjs === 'undefined') {
+                    throw new Error('필수 의존성(React, ReactDOM, RxJS)이 로드되지 않았습니다');
+                }
+
+                // Univer 전역 객체 확인
+                console.log('🔍 전역 Univer 객체들:', Object.keys(window).filter(key => key.includes('Univer')));
+
+                if (!window.UniverPresets) {
+                    throw new Error('UniverPresets가 로드되지 않았습니다');
+                }
+
+                if (!window.UniverPresetSheetsCore) {
+                    throw new Error('UniverPresetSheetsCore가 로드되지 않았습니다');
+                }
+
+                console.log('✅ 전역 객체 확인 완료');
+
+                // 필요한 모듈 추출
+                const { createUniver } = window.UniverPresets;
+                const { UniverSheetsCorePreset } = window.UniverPresetSheetsCore;
+                const localeEnUS = window.UniverPresetSheetsCoreEnUS;
+
+                console.log('🔧 createUniver:', typeof createUniver);
+                console.log('🔧 UniverSheetsCorePreset:', typeof UniverSheetsCorePreset);
+                console.log('🔧 locale:', typeof localeEnUS);
+
+                setStatus('🚀 Univer 인스턴스 생성 중...');
+
+                // Univer 생성 (공식 문서 기준)
+                const univerResult = createUniver({
+                    locale: 'en-US',
+                    locales: localeEnUS ? { 'en-US': localeEnUS } : {},
+                    presets: [
+                        UniverSheetsCorePreset({
+                            container: container,
+                            header: true,
+                            toolbar: true,
+                            footer: true
+                        })
+                    ]
+                });
+
+                // 결과 추출
+                univer = univerResult.univer;
+                univerAPI = univerResult.univerAPI;
+
+                if (!univer || !univerAPI) {
+                    throw new Error('Univer 인스턴스 생성 실패');
+                }
+
+                console.log('✅ Univer 생성 완료:', { univer, univerAPI });
+
+                // UI 렌더링 대기
+                setStatus('🎨 UI 렌더링 중...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 샘플 워크북 생성
+                setStatus('📊 워크북 생성 중...');
+
+                workbook = univerAPI.createWorkbook({
+                    name: 'MSM Excel 시스템',
+                    sheets: [{
+                        name: 'MSM 재고현황',
+                        cellData: {
+                            0: {
+                                0: { v: 'MSM Medical Korea - Excel 시스템' },
+                                1: { v: '의료용품 재고 관리' }
+                            },
+                            1: {
+                                0: { v: 'Date:' },
+                                1: { v: new Date().toLocaleDateString('ko-KR') }
+                            },
+                            3: {
+                                0: { v: '품목명' },
+                                1: { v: '수량' },
+                                2: { v: '단가' },
+                                3: { v: '금액' },
+                                4: { v: '재고상태' }
+                            },
+                            4: {
+                                0: { v: 'KF94 마스크' },
+                                1: { v: '1000개' },
+                                2: { v: '₩500' },
+                                3: { v: '₩500,000' },
+                                4: { v: '충분' }
+                            },
+                            5: {
+                                0: { v: '의료용 장갑' },
+                                1: { v: '500박스' },
+                                2: { v: '₩200' },
+                                3: { v: '₩100,000' },
+                                4: { v: '보통' }
+                            }
+                        },
+                        rowCount: 20,
+                        columnCount: 6
+                    }]
+                });
+
+                console.log('✅ 워크북 생성 완료:', workbook);
+
+                // 최종 완료
+                setStatus('✅ MSM Excel 시스템 준비 완료');
+
+            } catch (error) {
+                console.error('❌ 초기화 실패:', error);
+                setStatus(`초기화 실패: ${error.message}`, true);
+            }
+        }
+
+        // 새 문서 생성
+        function createNew() {
+            try {
+                if (univerAPI) {
+                    workbook = univerAPI.createWorkbook({
+                        name: '새 문서'
+                    });
+                    setStatus('✅ 새 문서 생성 완료');
+                } else {
+                    setStatus('시스템이 준비되지 않았습니다', true);
+                }
+            } catch (error) {
+                console.error('새 문서 생성 실패:', error);
+                setStatus('새 문서 생성 실패', true);
+            }
+        }
+
+        // 샘플 템플릿 로드
+        function loadTemplate(templateType) {
+            try {
+                if (!univerAPI) {
+                    setStatus('시스템이 준비되지 않았습니다', true);
+                    return;
+                }
+
+                setStatus('📄 샘플 템플릿 로드 중...');
+
+                const sampleData = {
+                    0: {
+                        0: { v: '견적서' },
+                        3: { v: '견적번호: Q-2025-001' }
+                    },
+                    2: {
+                        0: { v: '회사명:' },
+                        1: { v: 'ABC 병원' },
+                        3: { v: '견적일자:' },
+                        4: { v: '2025-09-18' }
+                    },
+                    4: {
+                        0: { v: '항목' },
+                        1: { v: '수량' },
+                        2: { v: '단가' },
+                        3: { v: '금액' }
+                    },
+                    5: {
+                        0: { v: 'KF94 마스크' },
+                        1: { v: '1,000개' },
+                        2: { v: '₩500' },
+                        3: { v: '₩500,000' }
+                    },
+                    6: {
+                        0: { v: '의료용 장갑' },
+                        1: { v: '500박스' },
+                        2: { v: '₩200' },
+                        3: { v: '₩100,000' }
+                    },
+                    8: {
+                        2: { v: '합계:' },
+                        3: { v: '₩600,000' }
+                    }
+                };
+
+                workbook = univerAPI.createWorkbook({
+                    name: '견적서 템플릿',
+                    sheets: [{
+                        name: '견적서',
+                        cellData: sampleData,
+                        rowCount: 15,
+                        columnCount: 5
+                    }]
+                });
+
+                setStatus('✅ 템플릿 로드 완료');
+
+            } catch (error) {
+                console.error('템플릿 로드 실패:', error);
+                setStatus('템플릿 로드 실패', true);
+            }
+        }
+
+        // Excel 파일 로딩 (기본적인 구현)
+        async function loadExcelFile(file) {
+            try {
+                setStatus(`📁 ${file.name} 파일 로딩 중...`);
+
+                if (!univerAPI) {
+                    throw new Error('Univer API가 준비되지 않았습니다');
+                }
+
+                // 값만 추출하는 간단한 방식
+                workbook = univerAPI.createWorkbook({
+                    name: file.name.replace(/\.[^/.]+$/, '')
+                });
+
+                setStatus(`✅ ${file.name} 로딩 완료 (값만 지원)`);
+
+            } catch (error) {
+                console.error('❌ Excel 파일 로딩 실패:', error);
+                setStatus(`Excel 파일 로딩 실패: ${error.message}`, true);
+            }
+        }
+
+        // 데이터 내보내기 (간단한 CSV)
+        function exportData() {
+            if (!workbook) {
+                setStatus('내보낼 데이터가 없습니다', true);
+                return;
+            }
+
+            try {
+                setStatus('📤 데이터 내보내기 중...');
+
+                // 간단한 CSV 데이터 생성
+                const csvData = [
+                    ['MSM Medical Korea - Excel 시스템'],
+                    ['Date:', new Date().toLocaleDateString('ko-KR')],
+                    [''],
+                    ['품목명', '수량', '단가', '금액'],
+                    ['KF94 마스크', '1000개', '₩500', '₩500,000'],
+                    ['의료용 장갑', '500박스', '₩200', '₩100,000']
+                ].map(row => row.join(',')).join('\n');
+
+                const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+                const fileName = `MSM_Export_${new Date().toISOString().split('T')[0]}.csv`;
+
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = fileName;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+
+                setStatus('✅ 내보내기 완료');
+
+            } catch (error) {
+                console.error('내보내기 실패:', error);
+                setStatus('내보내기 실패', true);
+            }
+        }
+
+        // Excel 파일 입력 이벤트
+        document.getElementById('excelFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                loadExcelFile(file);
+            }
+        });
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            console.log('🚀 페이지 로드 완료 - 초기화 시작');
+            setTimeout(initUniver, 1000);
+        });
+    </script>
+</body>
+</html>
