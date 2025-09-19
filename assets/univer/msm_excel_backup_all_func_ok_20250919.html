@@ -397,7 +397,12 @@ MSM COMPLETE SYSTEM - 최종 완성 버전 백업 (2025-09-19)
         const { univerAPI: api } = createUniver({
           locale: LocaleType.EN_US,
           locales: { [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS) },
-          presets: [UniverSheetsCorePreset({ container: 'univer' })],
+          presets: [UniverSheetsCorePreset({
+            container: 'univer',
+            header: true,
+            toolbar: true,
+            footer: true
+          })],
         });
 
         univerAPI = api;
@@ -457,25 +462,63 @@ MSM COMPLETE SYSTEM - 최종 완성 버전 백업 (2025-09-19)
 
           const arrayBuffer = await response.arrayBuffer();
           const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-          if (univerAPI && data.length > 0) {
-            const activeWorkbook = univerAPI.getActiveWorkbook();
-            const activeSheet = activeWorkbook.getActiveSheet();
+          if (univerAPI && workbook.SheetNames.length > 0) {
+            // 기존 워크북 삭제
+            try {
+              const currentWorkbook = univerAPI.getActiveWorkbook();
+              if (currentWorkbook) {
+                univerAPI.disposeWorkbook(currentWorkbook.getUnitId());
+                console.log('🗑️ 기존 워크북 삭제됨');
+              }
+            } catch (error) {
+              console.warn('⚠️ 기존 워크북 삭제 실패:', error.message);
+            }
 
-            // 기존 데이터 완전 삭제 (1000x100 범위)
-            const clearRange = activeSheet.getRange(0, 0, 1000, 100);
-            clearRange.clear();
+            // 새 워크북 생성
+            const newWorkbookData = {
+              name: `${templateType}_workbook`,
+              sheetOrder: [],
+              sheets: {}
+            };
 
-            // 새 데이터 로드
-            const dataRange = activeSheet.getRange(0, 0, data.length, Math.max(...data.map(row => row.length)));
-            dataRange.setValues(data);
+            // 모든 시트 데이터 준비
+            workbook.SheetNames.forEach((sheetName, index) => {
+              const worksheet = workbook.Sheets[sheetName];
+              const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-            setStatus(`✅ ${templateType} 실제 Excel 템플릿 로드 완료 (기존 데이터 삭제됨)`);
+              if (data.length > 0) {
+                const sheetId = `sheet_${index}`;
+                newWorkbookData.sheetOrder.push(sheetId);
+                newWorkbookData.sheets[sheetId] = {
+                  name: sheetName,
+                  id: sheetId,
+                  cellData: {}
+                };
+
+                // 셀 데이터 변환
+                data.forEach((row, rowIndex) => {
+                  row.forEach((cellValue, colIndex) => {
+                    if (cellValue !== null && cellValue !== undefined && cellValue !== '') {
+                      if (!newWorkbookData.sheets[sheetId].cellData[rowIndex]) {
+                        newWorkbookData.sheets[sheetId].cellData[rowIndex] = {};
+                      }
+                      newWorkbookData.sheets[sheetId].cellData[rowIndex][colIndex] = {
+                        v: cellValue
+                      };
+                    }
+                  });
+                });
+
+                console.log(`✅ 시트 "${sheetName}" 준비 완료 (${data.length}행)`);
+              }
+            });
+
+            // 새 워크북 생성
+            const newWorkbook = univerAPI.createWorkbook(newWorkbookData);
+            setStatus(`✅ ${templateType} 새 워크북 생성 완료 (${workbook.SheetNames.length}개 시트)`);
           } else {
-            throw new Error('데이터가 비어있습니다');
+            throw new Error('시트가 없습니다');
           }
         } catch (error) {
           console.error(`❌ Excel 파일 로드 실패:`, error);
@@ -496,6 +539,7 @@ MSM COMPLETE SYSTEM - 최종 완성 버전 백업 (2025-09-19)
         setStatus('📥 XLSX 파싱 중...');
         const buf = await file.arrayBuffer();
         const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true });
+
         const ws = wb.Sheets[wb.SheetNames[0]];
         const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true });
 
