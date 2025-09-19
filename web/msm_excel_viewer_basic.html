@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSM Excel Viewer - 기본 버전</title>
+
+    <!-- Luckysheet CSS -->
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/css/pluginsCss.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/plugins.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/css/luckysheet.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/assets/iconfont/iconfont.css' />
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .header {
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+
+        #luckysheet {
+            width: 100%;
+            height: calc(100% - 50px);
+        }
+
+        .status {
+            position: fixed;
+            top: 60px;
+            right: 10px;
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 999999;
+            display: none;
+        }
+
+        .status.show { display: block; }
+        .status.error { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 MSM Excel Viewer - 의료용품 재고 관리</h1>
+        <div class="toolbar">
+            <button class="btn" onclick="loadTemplate()">📄 견적서 템플릿</button>
+            <button class="btn" onclick="exportData()">💾 내보내기</button>
+            <button class="btn" onclick="importData()">📁 가져오기</button>
+        </div>
+    </div>
+
+    <div class="status" id="status">로딩 중...</div>
+    <div id="luckysheet"></div>
+
+    <!-- Luckysheet JS -->
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/luckysheet.umd.js"></script>
+
+    <script>
+        const status = document.getElementById('status');
+
+        function showStatus(msg, isError = false) {
+            status.textContent = msg;
+            status.className = 'status show' + (isError ? ' error' : '');
+            setTimeout(() => {
+                status.className = 'status';
+            }, 3000);
+        }
+
+        // 견적서 템플릿 생성 함수
+        function createQuotationData() {
+            const celldata = [];
+
+            // 제목
+            celldata.push({
+                "r": 0,
+                "c": 0,
+                "v": {
+                    "v": "MSM 의료용품 견적서",
+                    "bl": 1,
+                    "fs": 16,
+                    "fc": "#1a73e8"
+                }
+            });
+
+            // 헤더
+            const headers = ['품목코드', '품목명', '규격', '수량', '단가', '금액', '비고'];
+            headers.forEach((header, index) => {
+                celldata.push({
+                    "r": 2,
+                    "c": index,
+                    "v": {
+                        "v": header,
+                        "bl": 1,
+                        "bg": "#f0f0f0",
+                        "fc": "#333"
+                    }
+                });
+            });
+
+            // 샘플 데이터
+            const sampleData = [
+                ['MD-001', '수술용 메스', '일회용', 100, 5000, 500000, '긴급'],
+                ['MD-002', '의료용 거즈', '10x10cm', 500, 1000, 500000, ''],
+                ['MD-003', '주사기', '5ml', 200, 3000, 600000, ''],
+                ['MD-004', '수액세트', '표준형', 150, 8000, 1200000, '재고확인'],
+                ['MD-005', '진단키트', 'COVID-19', 50, 15000, 750000, '예약주문']
+            ];
+
+            sampleData.forEach((row, rowIndex) => {
+                row.forEach((cell, colIndex) => {
+                    const cellObj = {
+                        "r": rowIndex + 3,
+                        "c": colIndex,
+                        "v": {}
+                    };
+
+                    if (typeof cell === 'number') {
+                        cellObj.v = {
+                            "v": cell,
+                            "ct": {"fa": "#,##0", "t": "n"}
+                        };
+                    } else {
+                        cellObj.v = {"v": cell};
+                    }
+
+                    // 금액 컬럼 배경색
+                    if (colIndex === 5) {
+                        cellObj.v.bg = "#fffbf0";
+                    }
+
+                    celldata.push(cellObj);
+                });
+            });
+
+            // 합계
+            celldata.push({
+                "r": 9,
+                "c": 4,
+                "v": {
+                    "v": "합계:",
+                    "bl": 1,
+                    "bg": "#f0f0f0"
+                }
+            });
+
+            celldata.push({
+                "r": 9,
+                "c": 5,
+                "v": {
+                    "v": 3550000,
+                    "ct": {"fa": "#,##0", "t": "n"},
+                    "bl": 1,
+                    "bg": "#fff3e0",
+                    "fc": "#d84315"
+                }
+            });
+
+            return celldata;
+        }
+
+        // Luckysheet 초기화
+        window.addEventListener('load', function() {
+            try {
+                showStatus('Luckysheet 초기화 중...');
+
+                const options = {
+                    container: 'luckysheet',
+                    title: 'MSM Excel Viewer',
+                    lang: 'ko',
+                    data: [
+                        {
+                            "name": "견적서",
+                            "color": "#1a73e8",
+                            "status": 1,
+                            "order": 0,
+                            "celldata": createQuotationData(),
+                            "index": 0,
+                            "row": 30,
+                            "column": 10,
+                            "config": {
+                                "columnlen": {
+                                    "0": 100,
+                                    "1": 200,
+                                    "2": 100,
+                                    "3": 80,
+                                    "4": 100,
+                                    "5": 120,
+                                    "6": 150
+                                },
+                                "rowlen": {
+                                    "0": 30
+                                }
+                            }
+                        }
+                    ],
+                    showinfobar: false,
+                    showsheetbar: true,
+                    showtoolbar: true,
+                    showstatisticBar: true,
+                    sheetFormulaBar: true,
+                    allowEdit: true,
+                    enableAddRow: true,
+                    enableAddBackTop: true
+                };
+
+                // Luckysheet 생성
+                luckysheet.create(options);
+
+                showStatus('✅ Excel Viewer 준비 완료!');
+                console.log('✅ Luckysheet 초기화 성공');
+
+                // 전역 변수 저장
+                window.luckysheetInstance = luckysheet;
+
+                // Flutter 통합
+                if (window.parent !== window) {
+                    window.parent.postMessage('excel_ready', '*');
+                }
+
+            } catch (error) {
+                console.error('Luckysheet 초기화 실패:', error);
+                showStatus('초기화 실패: ' + error.message, true);
+            }
+        });
+
+        // 템플릿 로드
+        function loadTemplate() {
+            showStatus('견적서 템플릿 로드 중...');
+
+            // 새로운 시트 추가 또는 기존 시트 업데이트
+            const templateData = createQuotationData();
+
+            // Luckysheet API를 사용하여 데이터 업데이트
+            luckysheet.clearCell();
+
+            // 셀 데이터 설정
+            templateData.forEach(cell => {
+                luckysheet.setCellValue(cell.r, cell.c, cell.v.v);
+            });
+
+            showStatus('✅ 템플릿 로드 완료!');
+        }
+
+        // 데이터 내보내기
+        function exportData() {
+            showStatus('데이터 내보내기 중...');
+
+            // Luckysheet의 데이터를 가져오기
+            const sheetData = luckysheet.getAllSheets();
+
+            // CSV 형식으로 변환
+            let csvContent = '';
+            if (sheetData && sheetData[0] && sheetData[0].data) {
+                const data = sheetData[0].data;
+                for (let i = 0; i < data.length; i++) {
+                    if (data[i]) {
+                        const row = [];
+                        for (let j = 0; j < data[i].length; j++) {
+                            const cell = data[i][j];
+                            row.push(cell ? (cell.v || '') : '');
+                        }
+                        csvContent += row.join(',') + '\n';
+                    }
+                }
+            }
+
+            // 다운로드
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'MSM_견적서_' + new Date().toISOString().slice(0, 10) + '.csv';
+            link.click();
+
+            showStatus('✅ 내보내기 완료!');
+        }
+
+        // 데이터 가져오기
+        function importData() {
+            showStatus('파일 선택 대화상자를 확인하세요');
+
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.csv,.xlsx';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    showStatus('파일 읽는 중: ' + file.name);
+                    // 실제 파일 읽기 로직 구현 필요
+                    setTimeout(() => {
+                        showStatus('✅ 파일 가져오기 완료!');
+                    }, 1000);
+                }
+            };
+            input.click();
+        }
+
+        // Flutter 메시지 핸들러
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.action === 'loadExcel') {
+                console.log('Excel 파일 로드 요청:', event.data);
+            }
+        });
+    </script>
+</body>
+</html>

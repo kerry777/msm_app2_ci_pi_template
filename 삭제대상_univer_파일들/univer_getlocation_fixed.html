@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer Excel - 완전 해결 버전</title>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border-radius: 5px;
+            z-index: 999999;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .status.error { background: #dc3545; }
+        .status.loading { background: #ffc107; color: #333; }
+        .status.hidden { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div class="status loading" id="status">Univer 로딩 중...</div>
+    <div id="app"></div>
+
+    <!-- 가장 간단한 방법: preset 번들 직접 사용 -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/presets@latest/lib/styles/preset-sheets-en-US.css">
+    <script src="https://unpkg.com/@univerjs/presets@latest/lib/preset-sheets-en-US.js"></script>
+
+    <script>
+        const status = document.getElementById('status');
+
+        function setStatus(msg, type = 'loading') {
+            status.textContent = msg;
+            status.className = 'status ' + type;
+            console.log('[Univer]', msg);
+        }
+
+        // 페이지 로드 후 실행
+        window.addEventListener('DOMContentLoaded', async function() {
+            try {
+                setStatus('Univer 모듈 확인 중...', 'loading');
+
+                // 잠시 대기 (스크립트 로딩 완료 보장)
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Univer preset 확인
+                if (typeof UniverSheetsPresetEnUS === 'undefined') {
+                    throw new Error('Univer preset이 로드되지 않았습니다');
+                }
+
+                setStatus('Univer 초기화 중...', 'loading');
+
+                // Univer 초기화 - 가장 간단한 방법
+                const { univerAPI } = UniverSheetsPresetEnUS({
+                    container: 'app'
+                });
+
+                if (!univerAPI) {
+                    throw new Error('Univer API 생성 실패');
+                }
+
+                setStatus('워크북 생성 중...', 'loading');
+
+                // 워크북 생성
+                const workbook = univerAPI.createWorkbook({
+                    name: 'MSM 견적서'
+                });
+
+                // 활성 시트 가져오기
+                const sheet = workbook.getActiveSheet();
+
+                if (sheet) {
+                    setStatus('데이터 입력 중...', 'loading');
+
+                    // 헤더 데이터
+                    const headers = [
+                        ['품목코드', '품목명', '규격', '수량', '단가', '금액', '비고']
+                    ];
+
+                    // 샘플 데이터
+                    const data = [
+                        ['MD-001', '수술용 메스', '일회용', '100', '5000', '500000', '긴급'],
+                        ['MD-002', '의료용 거즈', '10x10cm', '500', '1000', '500000', ''],
+                        ['MD-003', '주사기', '5ml', '200', '3000', '600000', ''],
+                        ['MD-004', '수액세트', '표준형', '150', '8000', '1200000', '재고확인'],
+                        ['MD-005', '진단키트', 'COVID-19', '50', '15000', '750000', '예약주문']
+                    ];
+
+                    // 데이터 설정
+                    sheet.getRange(0, 0, 1, 7).setValues(headers);
+                    sheet.getRange(1, 0, data.length, 7).setValues(data);
+
+                    // 열 너비 조정
+                    for (let i = 0; i < 7; i++) {
+                        const width = i === 1 ? 200 : (i === 6 ? 150 : 100);
+                        sheet.setColumnWidth(i, width);
+                    }
+
+                    console.log('✅ 데이터 설정 완료');
+                }
+
+                // 전역 변수 저장
+                window.univerAPI = univerAPI;
+                window.workbook = workbook;
+
+                setStatus('✅ Univer Excel 준비 완료!', '');
+
+                // 3초 후 상태 메시지 숨기기
+                setTimeout(() => {
+                    status.classList.add('hidden');
+                }, 3000);
+
+                // 렌더링 확인
+                setTimeout(() => {
+                    const container = document.getElementById('app');
+                    console.log('렌더링 확인:', {
+                        자식요소: container.children.length,
+                        캔버스: container.querySelectorAll('canvas').length,
+                        Univer요소: container.querySelectorAll('[class*="univer"]').length
+                    });
+
+                    if (container.children.length === 0) {
+                        setStatus('⚠️ UI 렌더링 대기 중...', 'loading');
+                    }
+                }, 1500);
+
+                // Flutter 통합
+                if (window.parent !== window) {
+                    window.parent.postMessage('univer_ready', '*');
+                }
+
+            } catch (error) {
+                console.error('Univer 초기화 오류:', error);
+                setStatus('❌ 오류: ' + error.message, 'error');
+            }
+        });
+
+        // Flutter 메시지 핸들러
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.action === 'loadExcel') {
+                console.log('Excel 파일 로드 요청:', event.data);
+                // Excel 파일 로드 로직 추가
+            }
+        });
+    </script>
+</body>
+</html>

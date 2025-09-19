@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Univer Preset Test</title>
+    <style>
+        body { margin: 0; padding: 20px; background: #f0f0f0; }
+        .header { background: #007bff; color: white; padding: 15px; margin-bottom: 20px; }
+        .status { background: #d1ecf1; color: #0c5460; padding: 10px; margin-bottom: 20px; font-weight: bold; }
+        #app { width: 100%; height: 600px; border: 1px solid #ccc; background: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Univer Preset API 테스트</h1>
+        <p>Preset/Facade API 방식으로 시도</p>
+    </div>
+
+    <div class="status" id="status">스크립트 로딩 중...</div>
+
+    <div id="app"></div>
+
+    <!-- 최신 안정 버전 시도 -->
+    <script src="https://unpkg.com/@univerjs/presets@latest/lib/umd/index.js"></script>
+
+    <script>
+        function setStatus(msg) {
+            document.getElementById('status').textContent = msg;
+            console.log(msg);
+        }
+
+        // 전역 객체 확인
+        function checkGlobals() {
+            console.log('=== 전역 객체 확인 ===');
+            console.log('window.UniverPresets:', typeof window.UniverPresets, window.UniverPresets);
+            console.log('window.Univer:', typeof window.Univer, window.Univer);
+
+            // 가능한 모든 전역 객체 확인
+            const possibleNames = ['UniverPresets', 'Univer', 'createUniver', 'UniverCore', 'UniverSheets'];
+            possibleNames.forEach(name => {
+                if (window[name]) {
+                    console.log(`✅ 발견: ${name}`, typeof window[name], Object.keys(window[name] || {}));
+                }
+            });
+        }
+
+        // 스크립트 로딩 대기
+        function waitForLoad() {
+            setTimeout(() => {
+                checkGlobals();
+
+                if (window.UniverPresets) {
+                    setStatus('✅ Preset 로드됨 - 초기화 시도');
+                    initWithPresets();
+                } else if (window.Univer) {
+                    setStatus('✅ Univer 로드됨 - 기본 초기화 시도');
+                    initWithUniver();
+                } else {
+                    setStatus('❌ 어떤 Univer 객체도 찾을 수 없음');
+                    // 다른 버전 시도
+                    tryDifferentVersion();
+                }
+            }, 2000);
+        }
+
+        function initWithPresets() {
+            try {
+                console.log('Preset으로 초기화 시도...');
+                // Preset API 방식 시도
+                const univer = new UniverPresets.Univer({
+                    container: document.getElementById('app')
+                });
+
+                setStatus('🎉 Preset으로 성공!');
+                window.postMessage('univer_ready', '*');
+            } catch (e) {
+                console.error('Preset 실패:', e);
+                setStatus('❌ Preset 실패: ' + e.message);
+            }
+        }
+
+        function initWithUniver() {
+            try {
+                console.log('기본 Univer로 초기화 시도...');
+                const univer = new Univer({
+                    container: document.getElementById('app')
+                });
+
+                setStatus('🎉 기본 Univer로 성공!');
+                window.postMessage('univer_ready', '*');
+            } catch (e) {
+                console.error('기본 Univer 실패:', e);
+                setStatus('❌ 기본 Univer 실패: ' + e.message);
+            }
+        }
+
+        function tryDifferentVersion() {
+            setStatus('다른 버전 시도 중...');
+
+            // 다른 CDN이나 버전 시도
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/@univerjs/core@latest/lib/umd/index.js';
+            script.onload = () => {
+                setTimeout(() => {
+                    checkGlobals();
+                    setStatus('⚠️ 대체 버전으로도 실패');
+                }, 1000);
+            };
+            document.head.appendChild(script);
+        }
+
+        setStatus('스크립트 로딩 대기 중...');
+        waitForLoad();
+    </script>
+</body>
+</html>

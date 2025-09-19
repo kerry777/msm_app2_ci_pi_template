@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Univer Test</title>
+
+    <!-- React -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+    <!-- Basic CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@0.1.17/lib/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@0.1.17/lib/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/index.css" />
+
+    <style>
+        body { margin: 0; padding: 20px; }
+        #app { width: 100%; height: 600px; }
+        .status { padding: 10px; background: #f0f0f0; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">초기화 중...</div>
+    <div id="app"></div>
+
+    <!-- Univer Scripts -->
+    <script src="https://unpkg.com/@univerjs/core@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/design@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/umd/index.js"></script>
+
+    <script>
+        function setStatus(msg) {
+            document.getElementById('status').textContent = msg;
+            console.log(msg);
+        }
+
+        // 핵심 문제 해결: getLocation 에러 방지
+        if (!Object.prototype.getLocation) {
+            Object.prototype.getLocation = function() {
+                return {
+                    pathname: '/',
+                    search: '',
+                    hash: '',
+                    state: null,
+                    key: 'default'
+                };
+            };
+        }
+
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                setStatus('스크립트 확인 중...');
+
+                if (window.UniverCore && window.UniverCore.Univer) {
+                    initUniver();
+                } else {
+                    setStatus('❌ Univer 로드 실패');
+                }
+            }, 2000);
+        });
+
+        function initUniver() {
+            try {
+                setStatus('Univer 생성 중...');
+
+                const univer = new window.UniverCore.Univer({
+                    locale: 'en-US'
+                });
+
+                const container = document.getElementById('app');
+
+                univer.registerPlugin(window.UniverUi.UniverUIPlugin, {
+                    container: container
+                });
+
+                univer.registerPlugin(window.UniverSheets.UniverSheetsPlugin);
+                univer.registerPlugin(window.UniverSheetsUi.UniverSheetsUIPlugin);
+
+                const workbookData = {
+                    id: 'workbook-01',
+                    locale: 'en-US',
+                    name: 'Test Workbook',
+                    sheetOrder: ['sheet-01'],
+                    sheets: {
+                        'sheet-01': {
+                            id: 'sheet-01',
+                            name: 'Sheet1',
+                            cellData: {
+                                0: {
+                                    0: { v: 'Hello' },
+                                    1: { v: 'World' }
+                                },
+                                1: {
+                                    0: { v: 'Test' },
+                                    1: { v: 'Data' }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                univer.createUnit(window.UniverCore.UniverInstanceType.UNIVER_SHEET, workbookData);
+
+                setStatus('✅ 성공!');
+                window.postMessage('univer_ready', '*');
+
+            } catch (error) {
+                setStatus('❌ 에러: ' + error.message);
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

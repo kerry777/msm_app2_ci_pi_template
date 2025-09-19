@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handsontable Excel Viewer</title>
+
+    <!-- Handsontable CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/handsontable@latest/dist/handsontable.full.min.css" rel="stylesheet">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; }
+        #hot-container { width: 100%; height: 100%; }
+        .status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border-radius: 5px;
+            z-index: 999999;
+            font-size: 14px;
+        }
+        .status.error { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Loading Handsontable...</div>
+    <div id="hot-container"></div>
+
+    <!-- Handsontable JS -->
+    <script src="https://cdn.jsdelivr.net/npm/handsontable@latest/dist/handsontable.full.min.js"></script>
+
+    <script>
+        const status = document.getElementById('status');
+
+        try {
+            // Sample data for MSM 견적서
+            const data = [
+                ['품목코드', '품목명', '규격', '수량', '단가', '금액', '비고'],
+                ['MD-001', '수술용 메스', '일회용', 100, 5000, 500000, '긴급'],
+                ['MD-002', '의료용 거즈', '10x10cm', 500, 1000, 500000, ''],
+                ['MD-003', '주사기', '5ml', 200, 3000, 600000, ''],
+                ['MD-004', '수액세트', '표준형', 150, 8000, 1200000, '재고확인'],
+                ['MD-005', '진단키트', 'COVID-19', 50, 15000, 750000, '예약주문'],
+            ];
+
+            // Create empty rows for total 100 rows
+            for (let i = data.length; i < 100; i++) {
+                data.push(['', '', '', '', '', '', '']);
+            }
+
+            // Initialize Handsontable
+            const container = document.getElementById('hot-container');
+            const hot = new Handsontable(container, {
+                data: data,
+                rowHeaders: true,
+                colHeaders: true,
+                height: '100%',
+                width: '100%',
+                stretchH: 'all',
+                contextMenu: true,
+                filters: true,
+                dropdownMenu: true,
+                multiColumnSorting: true,
+                manualRowResize: true,
+                manualColumnResize: true,
+                autoWrapRow: true,
+                autoWrapCol: true,
+                licenseKey: 'non-commercial-and-evaluation',
+
+                // Column widths
+                colWidths: [100, 200, 100, 80, 100, 120, 150],
+
+                // Column types
+                columns: [
+                    { type: 'text' },    // 품목코드
+                    { type: 'text' },    // 품목명
+                    { type: 'text' },    // 규격
+                    { type: 'numeric', numericFormat: { pattern: '0,0' } },  // 수량
+                    { type: 'numeric', numericFormat: { pattern: '0,0' } },  // 단가
+                    { type: 'numeric', numericFormat: { pattern: '0,0' } },  // 금액
+                    { type: 'text' },    // 비고
+                ],
+
+                // Header styling
+                afterGetRowHeader: function(row, TH) {
+                    TH.className = 'htMiddle';
+                },
+
+                afterGetColHeader: function(col, TH) {
+                    TH.className = 'htCenter';
+                },
+
+                // Cell styling
+                cells: function(row, col) {
+                    const cellProperties = {};
+
+                    // Style header row
+                    if (row === 0) {
+                        cellProperties.renderer = function(instance, td, row, col, prop, value, cellProperties) {
+                            Handsontable.renderers.TextRenderer.apply(this, arguments);
+                            td.style.fontWeight = 'bold';
+                            td.style.background = '#f0f0f0';
+                            td.style.textAlign = 'center';
+                        };
+                    }
+
+                    return cellProperties;
+                }
+            });
+
+            // Update status
+            status.textContent = '✅ Handsontable is ready!';
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 3000);
+
+            console.log('✅ Handsontable initialized successfully!');
+
+            // Store globally
+            window.hot = hot;
+
+            // Flutter integration
+            if (window.parent !== window) {
+                window.parent.postMessage('handsontable_ready', '*');
+            }
+
+            // Message handlers
+            window.addEventListener('message', function(event) {
+                if (!event.data) return;
+
+                switch (event.data.action) {
+                    case 'loadData':
+                        if (event.data.data) {
+                            hot.loadData(event.data.data);
+                        }
+                        break;
+
+                    case 'getData':
+                        const data = hot.getData();
+                        window.parent.postMessage({
+                            action: 'dataResponse',
+                            data: data
+                        }, '*');
+                        break;
+
+                    case 'exportCSV':
+                        const csv = hot.getPlugin('exportFile').exportAsString('csv', {
+                            bom: false,
+                            columnDelimiter: ',',
+                            columnHeaders: true,
+                            rowHeaders: false,
+                            exportHiddenColumns: false,
+                            exportHiddenRows: false
+                        });
+                        window.parent.postMessage({
+                            action: 'csvResponse',
+                            data: csv
+                        }, '*');
+                        break;
+                }
+            });
+
+            // Add change listener
+            hot.addHook('afterChange', function(changes, source) {
+                if (source === 'loadData') return;
+
+                console.log('Data changed:', changes);
+                if (window.parent !== window) {
+                    window.parent.postMessage({
+                        action: 'dataChanged',
+                        changes: changes
+                    }, '*');
+                }
+            });
+
+        } catch (error) {
+            console.error('Handsontable init error:', error);
+            status.textContent = '❌ Error: ' + error.message;
+            status.className = 'status error';
+        }
+    </script>
+</body>
+</html>

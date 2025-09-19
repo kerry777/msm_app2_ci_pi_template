@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer Excel - 작동 확인 버전</title>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100vh; overflow: hidden; }
+        #app { width: 100%; height: 100%; }
+        .status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border-radius: 5px;
+            z-index: 999999;
+        }
+        .status.success { background: #28a745; }
+        .status.error { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Univer 로딩 중...</div>
+    <div id="app"></div>
+
+    <script type="module">
+        const status = document.getElementById('status');
+
+        // CDN에서 직접 ESM 모듈 import
+        import {
+            Univer,
+            UniverInstanceType,
+            LocaleType
+        } from 'https://unpkg.com/@univerjs/core@latest/+esm';
+
+        import {
+            defaultTheme
+        } from 'https://unpkg.com/@univerjs/design@latest/+esm';
+
+        import {
+            UniverDocsPlugin
+        } from 'https://unpkg.com/@univerjs/docs@latest/+esm';
+
+        import {
+            UniverDocsUIPlugin
+        } from 'https://unpkg.com/@univerjs/docs-ui@latest/+esm';
+
+        import {
+            UniverSheetsPlugin
+        } from 'https://unpkg.com/@univerjs/sheets@latest/+esm';
+
+        import {
+            UniverSheetsUIPlugin
+        } from 'https://unpkg.com/@univerjs/sheets-ui@latest/+esm';
+
+        import {
+            UniverSheetsFormulaPlugin
+        } from 'https://unpkg.com/@univerjs/sheets-formula@latest/+esm';
+
+        import {
+            UniverFormulaEnginePlugin
+        } from 'https://unpkg.com/@univerjs/engine-formula@latest/+esm';
+
+        import {
+            UniverRenderEnginePlugin
+        } from 'https://unpkg.com/@univerjs/engine-render@latest/+esm';
+
+        import {
+            UniverUIPlugin
+        } from 'https://unpkg.com/@univerjs/ui@latest/+esm';
+
+        // CSS 동적 로드
+        const cssLinks = [
+            'https://unpkg.com/@univerjs/design@latest/lib/index.css',
+            'https://unpkg.com/@univerjs/ui@latest/lib/index.css',
+            'https://unpkg.com/@univerjs/docs-ui@latest/lib/index.css',
+            'https://unpkg.com/@univerjs/sheets-ui@latest/lib/index.css',
+            'https://unpkg.com/@univerjs/sheets-formula@latest/lib/index.css'
+        ];
+
+        cssLinks.forEach(href => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = href;
+            document.head.appendChild(link);
+        });
+
+        async function initUniver() {
+            try {
+                status.textContent = 'Univer 초기화 중...';
+
+                // Univer 인스턴스 생성
+                const univer = new Univer({
+                    theme: defaultTheme,
+                    locale: LocaleType.EN_US,
+                    logLevel: 2
+                });
+
+                // 필수 플러그인 등록
+                univer.registerPlugin(UniverRenderEnginePlugin);
+                univer.registerPlugin(UniverFormulaEnginePlugin);
+                univer.registerPlugin(UniverUIPlugin, {
+                    container: document.getElementById('app'),
+                });
+
+                univer.registerPlugin(UniverDocsPlugin);
+                univer.registerPlugin(UniverDocsUIPlugin);
+                univer.registerPlugin(UniverSheetsPlugin);
+                univer.registerPlugin(UniverSheetsUIPlugin);
+                univer.registerPlugin(UniverSheetsFormulaPlugin);
+
+                status.textContent = '워크북 생성 중...';
+
+                // 워크북 생성
+                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                    id: 'workbook-01',
+                    name: 'MSM 견적서',
+                    appVersion: '0.1.0',
+                    sheets: {
+                        'sheet-01': {
+                            id: 'sheet-01',
+                            name: '견적서',
+                            rowCount: 100,
+                            columnCount: 20,
+                            cellData: {
+                                0: {
+                                    0: { v: '품목코드' },
+                                    1: { v: '품목명' },
+                                    2: { v: '규격' },
+                                    3: { v: '수량' },
+                                    4: { v: '단가' },
+                                    5: { v: '금액' },
+                                    6: { v: '비고' }
+                                },
+                                1: {
+                                    0: { v: 'MD-001' },
+                                    1: { v: '수술용 메스' },
+                                    2: { v: '일회용' },
+                                    3: { v: 100 },
+                                    4: { v: 5000 },
+                                    5: { v: 500000 },
+                                    6: { v: '긴급' }
+                                },
+                                2: {
+                                    0: { v: 'MD-002' },
+                                    1: { v: '의료용 거즈' },
+                                    2: { v: '10x10cm' },
+                                    3: { v: 500 },
+                                    4: { v: 1000 },
+                                    5: { v: 500000 }
+                                },
+                                3: {
+                                    0: { v: 'MD-003' },
+                                    1: { v: '주사기' },
+                                    2: { v: '5ml' },
+                                    3: { v: 200 },
+                                    4: { v: 3000 },
+                                    5: { v: 600000 }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 전역 변수로 저장
+                window.univer = univer;
+                window.workbook = workbook;
+
+                status.textContent = '✅ Univer 준비 완료!';
+                status.className = 'status success';
+
+                console.log('✅ Univer 초기화 성공!');
+
+                // 렌더링 확인
+                setTimeout(() => {
+                    const app = document.getElementById('app');
+                    console.log('렌더링 상태:', {
+                        자식요소: app.children.length,
+                        캔버스: app.querySelectorAll('canvas').length,
+                        Univer요소: app.querySelectorAll('[class*="univer"]').length
+                    });
+                }, 2000);
+
+            } catch (error) {
+                console.error('Univer 초기화 실패:', error);
+                status.textContent = '❌ 오류: ' + error.message;
+                status.className = 'status error';
+            }
+        }
+
+        // 초기화 실행
+        initUniver();
+    </script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Univer Excel - 100% 작동 버전</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        body { height: 100vh; overflow: hidden; }
+        #container { height: 100vh; width: 100vw; }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+
+    <!-- Univer 최신 버전 CDN - styles 폴더로 수정 -->
+    <script src="https://unpkg.com/@univerjs/presets@0.10.6/lib/preset-sheets-en-US.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/presets@0.10.6/lib/styles/preset-sheets-en-US.css">
+
+    <script>
+        // 페이지 로드 완료 후 실행
+        window.addEventListener('DOMContentLoaded', function() {
+            // 디버깅을 위한 전역 객체 확인
+            console.log('Checking for Univer globals...');
+            const univerKeys = Object.keys(window).filter(k => k.toLowerCase().includes('univer'));
+            console.log('Found Univer keys:', univerKeys);
+
+            // 2초 대기 후 초기화 (스크립트 로드 보장)
+            setTimeout(function() {
+                if (window.UniverSheetsPresetEnUS) {
+                    try {
+                        console.log('Initializing Univer...');
+
+                        // Univer 초기화
+                        const result = UniverSheetsPresetEnUS({
+                            container: 'container'
+                        });
+
+                        // univerAPI 추출
+                        const univerAPI = result.univerAPI;
+
+                        // 워크북 생성
+                        const workbook = univerAPI.createWorkbook({
+                            name: 'MSM 견적서',
+                            sheets: [{
+                                name: '견적서',
+                                rowCount: 100,
+                                columnCount: 20
+                            }]
+                        });
+
+                        // 샘플 데이터 추가
+                        const sheet = workbook.getActiveSheet();
+                        if (sheet) {
+                            // 헤더 설정
+                            sheet.getRange(0, 0, 1, 7).setValues([
+                                ['품목코드', '품목명', '규격', '수량', '단가', '금액', '비고']
+                            ]);
+
+                            // 데이터 추가
+                            const data = [
+                                ['MD-001', '수술용 메스', '일회용', '100', '5000', '500000', '긴급'],
+                                ['MD-002', '의료용 거즈', '10x10cm', '500', '1000', '500000', ''],
+                                ['MD-003', '주사기', '5ml', '200', '3000', '600000', ''],
+                                ['MD-004', '수액세트', '표준형', '150', '8000', '1200000', '재고확인'],
+                                ['MD-005', '진단키트', 'COVID-19', '50', '15000', '750000', '예약주문']
+                            ];
+
+                            sheet.getRange(1, 0, data.length, 7).setValues(data);
+
+                            // 열 너비 조정
+                            for (let i = 0; i < 7; i++) {
+                                sheet.setColumnWidth(i, i === 1 ? 200 : 100);
+                            }
+                        }
+
+                        console.log('✅ Univer 초기화 완료!');
+                        window.univerAPI = univerAPI;
+
+                    } catch (error) {
+                        console.error('Univer 초기화 실패:', error);
+                    }
+                } else {
+                    console.error('UniverSheetsPresetEnUS를 찾을 수 없습니다');
+
+                    // 전역 객체 다시 확인
+                    const allGlobals = Object.keys(window).filter(k => k.toLowerCase().includes('univer'));
+                    console.log('Available Univer globals:', allGlobals);
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

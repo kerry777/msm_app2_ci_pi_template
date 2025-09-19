@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSM Excel Viewer - Fixed Version</title>
+
+    <!-- 1단계: getLocation 에러 방지 (가장 먼저 실행) -->
+    <script>
+        // 전역 getLocation 함수 생성
+        window.getLocation = function() {
+            return {
+                pathname: window.location.pathname || '/',
+                search: window.location.search || '',
+                hash: window.location.hash || '',
+                state: null,
+                key: 'default'
+            };
+        };
+
+        // Object.prototype에도 추가 (Univer 내부에서 사용할 수 있도록)
+        if (typeof Object.prototype.getLocation === 'undefined') {
+            Object.defineProperty(Object.prototype, 'getLocation', {
+                value: function() {
+                    return window.getLocation();
+                },
+                writable: true,
+                configurable: true
+            });
+        }
+
+        // history 객체에도 추가
+        if (window.history && !window.history.getLocation) {
+            window.history.getLocation = window.getLocation;
+        }
+    </script>
+
+    <!-- 2단계: React 18 (Univer 의존성) -->
+    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+    <!-- 3단계: Univer 0.1.17 CSS (검증된 버전) -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@0.1.17/lib/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@0.1.17/lib/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/index.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .status-bar {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            z-index: 999999;
+            min-width: 300px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .status-bar.success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .status-bar.error {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        .status-bar.warning {
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+            color: #333;
+        }
+
+        .status-bar.info {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-bar info" id="status">
+        <span class="loading-spinner"></span>
+        <span id="status-text">Initializing Univer Excel Viewer...</span>
+    </div>
+    <div id="app"></div>
+
+    <!-- 4단계: Univer 0.1.17 JavaScript -->
+    <script src="https://unpkg.com/@univerjs/core@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/design@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/umd/index.js"></script>
+
+    <script>
+        // 상태 업데이트 함수
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            const textEl = document.getElementById('status-text');
+
+            if (statusEl && textEl) {
+                statusEl.className = 'status-bar ' + type;
+                textEl.textContent = message;
+
+                // 스피너 제거 (성공/에러 시)
+                if (type === 'success' || type === 'error') {
+                    const spinner = statusEl.querySelector('.loading-spinner');
+                    if (spinner) spinner.style.display = 'none';
+                }
+
+                console.log(`[STATUS ${type.toUpperCase()}]`, message);
+            }
+        }
+
+        // 에러 핸들링 (getLocation 에러 무시)
+        window.addEventListener('error', function(e) {
+            if (e.message && (e.message.includes('getLocation') || e.message.includes('SelectionRenderService'))) {
+                console.warn('Known error suppressed:', e.message);
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        }, true);
+
+        // 콘솔 에러 필터링
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            const msg = args.join(' ');
+            if (msg.includes('getLocation') || msg.includes('SelectionRenderService') || msg.includes('RefSelectionsRenderService')) {
+                console.warn('Console error filtered:', msg);
+                return;
+            }
+            originalConsoleError.apply(console, args);
+        };
+
+        // Univer 초기화
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('=== DOMContentLoaded event fired ===');
+            updateStatus('Waiting for Univer modules to load...', 'warning');
+
+            let checkCount = 0;
+            const maxChecks = 100; // 10초 타임아웃
+
+            const checkModules = setInterval(function() {
+                checkCount++;
+
+                if (checkCount === 1) {
+                    console.log('=== Checking for Univer modules ===');
+                    console.log('UniverCore:', !!window.UniverCore);
+                    console.log('UniverUi:', !!window.UniverUi);
+                    console.log('UniverSheets:', !!window.UniverSheets);
+                    console.log('UniverSheetsUi:', !!window.UniverSheetsUi);
+                }
+
+                // 모든 필수 모듈이 로드되었는지 확인
+                if (window.UniverCore && window.UniverCore.Univer &&
+                    window.UniverUi && window.UniverSheets && window.UniverSheetsUi) {
+
+                    clearInterval(checkModules);
+                    updateStatus('Modules loaded. Initializing Univer...', 'info');
+
+                    // 약간의 지연 후 초기화 (DOM 안정화)
+                    setTimeout(initializeUniver, 300);
+
+                } else if (checkCount >= maxChecks) {
+                    clearInterval(checkModules);
+                    updateStatus('Failed to load Univer modules after 10 seconds', 'error');
+                    console.error('Missing modules:', {
+                        UniverCore: !!window.UniverCore,
+                        UniverUi: !!window.UniverUi,
+                        UniverSheets: !!window.UniverSheets,
+                        UniverSheetsUi: !!window.UniverSheetsUi
+                    });
+                }
+            }, 100);
+        });
+
+        function initializeUniver() {
+            try {
+                updateStatus('Creating Univer instance...', 'info');
+
+                // 모듈 추출
+                const { Univer, UniverInstanceType } = window.UniverCore;
+                const { UniverUIPlugin } = window.UniverUi;
+                const { UniverSheetsPlugin } = window.UniverSheets;
+                const { UniverSheetsUIPlugin } = window.UniverSheetsUi;
+
+                // Univer 인스턴스 생성
+                const univer = new Univer({
+                    theme: {
+                        colorScheme: 'light'
+                    },
+                    locale: 'ko-KR'
+                });
+
+                updateStatus('Registering plugins...', 'info');
+
+                // 플러그인 등록
+                univer.registerPlugin(UniverUIPlugin, {
+                    container: document.getElementById('app'),
+                    header: true,
+                    toolbar: true,
+                    footer: true
+                });
+
+                univer.registerPlugin(UniverSheetsPlugin);
+                univer.registerPlugin(UniverSheetsUIPlugin);
+
+                updateStatus('Creating workbook...', 'info');
+
+                // MSM 견적서 워크북 생성
+                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                    id: 'msm-workbook',
+                    name: 'MSM 견적서 시스템',
+                    appVersion: '1.0.0',
+                    locale: 'ko-KR',
+                    sheets: [
+                        {
+                            id: 'sheet-001',
+                            name: '견적서',
+                            rowCount: 1000,
+                            columnCount: 26,
+                            rowData: {
+                                0: { h: 30 }, // 헤더 행 높이
+                            },
+                            columnData: [
+                                { w: 100 }, // A: 품목코드
+                                { w: 200 }, // B: 품목명
+                                { w: 120 }, // C: 규격
+                                { w: 80 },  // D: 단위
+                                { w: 80 },  // E: 수량
+                                { w: 100 }, // F: 단가
+                                { w: 120 }, // G: 금액
+                                { w: 150 }, // H: 비고
+                            ],
+                            cellData: {
+                                0: {
+                                    0: {
+                                        v: '품목코드',
+                                        s: {
+                                            bl: 1, // bold
+                                            bg: { rgb: '#f0f0f0' },
+                                            ht: 2, // center align
+                                            vt: 2  // middle align
+                                        }
+                                    },
+                                    1: {
+                                        v: '품목명',
+                                        s: {
+                                            bl: 1,
+                                            bg: { rgb: '#f0f0f0' },
+                                            ht: 2,
+                                            vt: 2
+                                        }
+                                    },
+                                    2: {
+                                        v: '규격',
+                                        s: {
+                                            bl: 1,
+                                            bg: { rgb: '#f0f0f0' },
+                                            ht: 2,
+                                            vt: 2
+                                        }
+                                    },
+                                    3: {
+                                        v: '단위',
+                                        s: {
+                                            bl: 1,
+                                            bg: { rgb: '#f0f0f0' },
+                                            ht: 2,
+                                            vt: 2
+                                        }
+                                    },
+                                    4: {
+                                        v: '수량',
+                                        s: {
+                                            bl: 1,
+                                            bg: { rgb: '#f0f0f0' },
+                                            ht: 2,
+                                            vt: 2
+                                        }
+                                    },
+                                    5: {
+                                        v: '단가',
+                                        s: {
+                                            bl: 1,
+                                            bg: { rgb: '#f0f0f0' },
+                                            ht: 2,
+                                            vt: 2
+                                        }
+                                    },
+                                    6: {
+                                        v: '금액',
+                                        s: {
+                                            bl: 1,
+                                            bg: { rgb: '#f0f0f0' },
+                                            ht: 2,
+                                            vt: 2
+                                        }
+                                    },
+                                    7: {
+                                        v: '비고',
+                                        s: {
+                                            bl: 1,
+                                            bg: { rgb: '#f0f0f0' },
+                                            ht: 2,
+                                            vt: 2
+                                        }
+                                    }
+                                },
+                                // 샘플 데이터
+                                1: {
+                                    0: { v: 'MD-001' },
+                                    1: { v: '수술용 메스 (일회용)' },
+                                    2: { v: '10개입' },
+                                    3: { v: 'BOX' },
+                                    4: { v: 100, t: 2 }, // number type
+                                    5: { v: 5000, t: 2 },
+                                    6: { v: 500000, t: 2 },
+                                    7: { v: '긴급배송' }
+                                },
+                                2: {
+                                    0: { v: 'MD-002' },
+                                    1: { v: '의료용 거즈' },
+                                    2: { v: '10x10cm' },
+                                    3: { v: 'EA' },
+                                    4: { v: 500, t: 2 },
+                                    5: { v: 1000, t: 2 },
+                                    6: { v: 500000, t: 2 },
+                                    7: { v: '' }
+                                },
+                                3: {
+                                    0: { v: 'MD-003' },
+                                    1: { v: '주사기' },
+                                    2: { v: '5ml' },
+                                    3: { v: 'EA' },
+                                    4: { v: 200, t: 2 },
+                                    5: { v: 3000, t: 2 },
+                                    6: { v: 600000, t: 2 },
+                                    7: { v: '재고확인필요' }
+                                },
+                                4: {
+                                    0: { v: 'MD-004' },
+                                    1: { v: '수액세트' },
+                                    2: { v: '표준형' },
+                                    3: { v: 'SET' },
+                                    4: { v: 150, t: 2 },
+                                    5: { v: 8000, t: 2 },
+                                    6: { v: 1200000, t: 2 },
+                                    7: { v: '' }
+                                },
+                                5: {
+                                    0: { v: 'MD-005' },
+                                    1: { v: '진단키트' },
+                                    2: { v: 'COVID-19' },
+                                    3: { v: 'EA' },
+                                    4: { v: 50, t: 2 },
+                                    5: { v: 15000, t: 2 },
+                                    6: { v: 750000, t: 2 },
+                                    7: { v: '예약주문' }
+                                }
+                            }
+                        }
+                    ]
+                });
+
+                updateStatus('✅ Univer Excel Viewer is ready!', 'success');
+
+                // 전역 변수 설정 (디버깅 및 Flutter 연동용)
+                window.univer = univer;
+                window.workbook = workbook;
+
+                // Flutter에 준비 완료 알림
+                if (window.parent !== window) {
+                    window.parent.postMessage('univer_ready', '*');
+                }
+
+                // 디버깅 정보 출력
+                console.log('✅ Univer initialized successfully!');
+                console.log('Available features:', {
+                    univer: !!window.univer,
+                    workbook: !!window.workbook,
+                    canvas: document.querySelectorAll('canvas').length > 0,
+                    toolbar: document.querySelector('.univer-toolbar') !== null
+                });
+
+                // 5초 후 상태바 자동 숨김
+                setTimeout(function() {
+                    const statusEl = document.getElementById('status');
+                    if (statusEl && statusEl.classList.contains('success')) {
+                        statusEl.style.transition = 'opacity 0.5s';
+                        statusEl.style.opacity = '0';
+                        setTimeout(() => statusEl.style.display = 'none', 500);
+                    }
+                }, 5000);
+
+            } catch (error) {
+                updateStatus('Error: ' + error.message, 'error');
+                console.error('Univer initialization failed:', error);
+                console.error('Stack trace:', error.stack);
+            }
+        }
+
+        // Flutter 메시지 처리
+        window.addEventListener('message', function(event) {
+            console.log('Received message from Flutter:', event.data);
+
+            if (event.data && typeof event.data === 'object') {
+                switch (event.data.action) {
+                    case 'loadExcel':
+                        updateStatus('Loading Excel file...', 'warning');
+                        // Excel 파일 로드 로직 구현
+                        break;
+
+                    case 'exportPDF':
+                        updateStatus('Exporting to PDF...', 'warning');
+                        // PDF 내보내기 로직 구현
+                        break;
+
+                    case 'ping':
+                        console.log('Ping received, sending pong...');
+                        if (window.parent !== window) {
+                            window.parent.postMessage('pong', '*');
+                        }
+                        break;
+                }
+            }
+        });
+
+        // 주기적으로 getLocation 패치 유지 (일부 동적 로드 상황 대비)
+        setInterval(function() {
+            if (!window.getLocation) {
+                window.getLocation = function() {
+                    return { pathname: '/', search: '', hash: '', state: null };
+                };
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

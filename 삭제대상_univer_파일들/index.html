@@ -46,17 +46,22 @@
         }
     </style>
 
-    <!-- Univer Preset CDN (공식 문서) -->
+    <!-- Univer CDN (최신 안정 버전) -->
     <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/rxjs/dist/bundles/rxjs.umd.min.js"></script>
     <script src="https://unpkg.com/echarts@5.6.0/dist/echarts.min.js"></script>
 
-    <script src="https://unpkg.com/@univerjs/presets@0.2.0/lib/umd/index.js"></script>
-    <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.2.0/lib/umd/index.js"></script>
-    <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.2.0/lib/umd/locales/ko-KR.js"></script>
-    <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.2.0/lib/umd/locales/en-US.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core@0.2.0/lib/index.css" />
+    <!-- Univer Core 라이브러리들 -->
+    <script src="https://unpkg.com/@univerjs/core@latest/dist/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/engine-render@latest/dist/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@latest/dist/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@latest/dist/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-formula@latest/dist/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/xlsx@latest/dist/umd/index.js"></script>
+    
+    <!-- 스타일시트 -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@latest/dist/index.css" />
     <script src="https://unpkg.com/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -82,45 +87,52 @@
         console.log('window.UniverCore:', typeof window.UniverCore);
         console.log('window.UniverPresetSheetsCore:', typeof window.UniverPresetSheetsCore);
 
-        // Univer 초기화 (안정적인 방식)
+        // Univer 초기화 (새로운 API 구조)
         setTimeout(async () => {
             try {
-                if (typeof UniverPresets === 'undefined' || typeof UniverCore === 'undefined' || typeof UniverPresetSheetsCore === 'undefined') {
-                    throw new Error('Univer 라이브러리가 로드되지 않았습니다');
-                }
+                // 전역 객체 확인
+                console.log('window.UniverCore:', typeof window.UniverCore);
+                console.log('window.UniverSheets:', typeof window.UniverSheets);
+                console.log('window.UniverSheetsUI:', typeof window.UniverSheetsUI);
+                console.log('window.UniverXLSX:', typeof window.UniverXLSX);
 
-                const { createUniver } = UniverPresets;
-                const { LocaleType, mergeLocales } = UniverCore;
-                const { UniverSheetsCorePreset } = UniverPresetSheetsCore;
-
-                console.log('✅ Univer 객체들 로드 완료');
-
-                // 로케일 설정
-                let locales = {};
-                try {
-                    if (typeof UniverPresetSheetsCoreKoKR !== 'undefined') {
-                        locales[LocaleType.KO_KR] = mergeLocales(UniverPresetSheetsCoreKoKR);
-                    }
-                    if (typeof UniverPresetSheetsCoreEnUS !== 'undefined') {
-                        locales[LocaleType.EN_US] = mergeLocales(UniverPresetSheetsCoreEnUS);
-                    }
-                } catch (e) {
-                    console.warn('로케일 설정 실패, 기본값 사용:', e);
+                if (typeof window.UniverCore === 'undefined') {
+                    throw new Error('UniverCore가 로드되지 않았습니다');
                 }
 
                 // Univer 인스턴스 생성
-                const result = createUniver({
-                    locale: LocaleType.KO_KR,
-                    locales: locales,
-                    presets: [UniverSheetsCorePreset({ container: 'univer-container' })],
+                const univer = new window.UniverCore.Univer();
+
+                // 플러그인 등록
+                univer.registerPlugin(window.UniverEngineRender.UniverEngineRenderPlugin, {
+                    container: 'univer-container',
                 });
+                univer.registerPlugin(window.UniverSheets.UniverSheetsPlugin);
+                univer.registerPlugin(window.UniverSheetsUI.UniverSheetsUIPlugin);
+                univer.registerPlugin(window.UniverFormula.UniverFormulaPlugin);
+                univer.registerPlugin(window.UniverXLSX.UniverXLSXPlugin);
 
+                // 워크북 생성
+                const workbook = univer.createUniverSheet();
+                
                 // 전역 변수로 저장
-                window.univerAPI = result.univerAPI;
-
-                // 약간의 지연 후 초기 워크북 생성
-                await new Promise(resolve => setTimeout(resolve, 500));
-                result.univerAPI.createWorkbook({ name: 'MSM Excel 뷰어' });
+                window.univer = univer;
+                window.univerAPI = {
+                    getActiveWorkbook: () => workbook,
+                    createWorkbook: (options) => {
+                        console.log('워크북 생성:', options);
+                        return workbook;
+                    },
+                    exportWorkbook: async (format) => {
+                        if (format === 'xlsx') {
+                            const xlsxPlugin = univer.getPluginByName('UniverXLSXPlugin');
+                            if (xlsxPlugin && xlsxPlugin.save) {
+                                return await xlsxPlugin.save();
+                            }
+                        }
+                        throw new Error('지원하지 않는 형식: ' + format);
+                    }
+                };
 
                 updateStatus('✅ MSM Excel 뷰어 준비 완료');
 
@@ -133,7 +145,7 @@
                 console.error('❌ Univer 초기화 실패:', error);
                 updateStatus('❌ 초기화 실패: ' + error.message);
             }
-        }, 1000);
+        }, 2000);
 
         function updateStatus(message) {
             document.getElementById('status').textContent = message;

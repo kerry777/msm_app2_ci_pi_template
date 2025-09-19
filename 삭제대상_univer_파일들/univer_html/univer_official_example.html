@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Univer Basic Example</title>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@0.1.17/lib/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@0.1.17/lib/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/index.css" />
+
+    <style>
+        body { margin: 0; padding: 20px; }
+        #app { width: 100%; height: 600px; }
+    </style>
+</head>
+<body>
+    <h1>Univer Basic Example</h1>
+    <div id="app"></div>
+
+    <script src="https://unpkg.com/@univerjs/core@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/design@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/umd/index.js"></script>
+
+    <script>
+        // Wait for all scripts to load
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                console.log('Scripts loaded, checking objects...');
+                console.log('UniverCore:', window.UniverCore);
+                console.log('UniverUi:', window.UniverUi);
+                console.log('UniverSheets:', window.UniverSheets);
+                console.log('UniverSheetsUi:', window.UniverSheetsUi);
+
+                if (window.UniverCore && window.UniverCore.Univer) {
+                    initUniver();
+                } else {
+                    console.error('Univer objects not properly loaded');
+                    document.getElementById('app').innerHTML = '<p style="color: red;">Univer failed to load</p>';
+                }
+            }, 2000);
+        });
+
+        function initUniver() {
+            try {
+                console.log('Creating Univer instance...');
+
+                const univer = new window.UniverCore.Univer({
+                    locale: 'en-US'
+                });
+
+                console.log('Univer created:', univer);
+
+                // Register plugins
+                univer.registerPlugin(window.UniverUi.UniverUIPlugin, {
+                    container: document.getElementById('app')
+                });
+
+                univer.registerPlugin(window.UniverSheets.UniverSheetsPlugin);
+                univer.registerPlugin(window.UniverSheetsUi.UniverSheetsUIPlugin);
+
+                console.log('Plugins registered');
+
+                // Create workbook
+                const workbookData = {
+                    id: 'workbook-01',
+                    locale: 'en-US',
+                    name: 'New Workbook',
+                    sheetOrder: ['sheet-01'],
+                    sheets: {
+                        'sheet-01': {
+                            id: 'sheet-01',
+                            name: 'Sheet1',
+                            cellData: {
+                                0: {
+                                    0: { v: 'Hello' },
+                                    1: { v: 'World' }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                univer.createUnit(window.UniverCore.UniverInstanceType.UNIVER_SHEET, workbookData);
+
+                console.log('Workbook created successfully');
+                window.postMessage('univer_ready', '*');
+
+            } catch (error) {
+                console.error('Error initializing Univer:', error);
+                document.getElementById('app').innerHTML = '<p style="color: red;">Error: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

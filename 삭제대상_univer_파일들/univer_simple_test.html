@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer Simple Test</title>
+
+    <!-- Step 1: Fix getLocation error FIRST -->
+    <script>
+        console.log('Step 1: Patching getLocation...');
+        window.getLocation = function() {
+            return { pathname: '/', search: '', hash: '', state: null };
+        };
+        Object.defineProperty(Object.prototype, 'getLocation', {
+            value: function() { return window.getLocation(); },
+            writable: true,
+            configurable: true
+        });
+    </script>
+
+    <!-- Step 2: React (Required by Univer) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/rxjs@7.8.1/dist/bundles/rxjs.umd.min.js"></script>
+
+    <!-- Step 3: Univer CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@0.1.17/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@0.1.17/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/index.css">
+
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        #app { width: 100vw; height: 100vh; }
+        .status { padding: 10px; background: #333; color: white; }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Loading...</div>
+    <div id="app"></div>
+
+    <!-- Step 4: Load Univer JS -->
+    <script src="https://unpkg.com/@univerjs/core@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/design@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/umd/index.js"></script>
+
+    <script>
+        // Step 5: Initialize after everything loads
+        window.addEventListener('load', function() {
+            const statusEl = document.getElementById('status');
+
+            console.log('Step 2: Checking modules...');
+            statusEl.textContent = 'Checking modules...';
+
+            // Check what's loaded
+            console.log('React:', typeof React);
+            console.log('ReactDOM:', typeof ReactDOM);
+            console.log('UniverCore:', typeof window.UniverCore);
+            console.log('UniverUi:', typeof window.UniverUi);
+            console.log('UniverSheets:', typeof window.UniverSheets);
+            console.log('UniverSheetsUi:', typeof window.UniverSheetsUi);
+
+            // Wait a bit for all scripts to initialize
+            setTimeout(function() {
+                try {
+                    if (!window.UniverCore) {
+                        throw new Error('UniverCore not loaded!');
+                    }
+
+                    console.log('Step 3: Creating Univer instance...');
+                    statusEl.textContent = 'Creating Univer...';
+
+                    const { Univer, UniverInstanceType } = window.UniverCore;
+                    const { UniverUIPlugin } = window.UniverUi;
+                    const { UniverSheetsPlugin } = window.UniverSheets;
+                    const { UniverSheetsUIPlugin } = window.UniverSheetsUi;
+
+                    // Create Univer instance
+                    const univer = new Univer({});
+
+                    console.log('Step 4: Registering plugins...');
+                    statusEl.textContent = 'Registering plugins...';
+
+                    // Register plugins
+                    univer.registerPlugin(UniverUIPlugin, {
+                        container: document.getElementById('app')
+                    });
+                    univer.registerPlugin(UniverSheetsPlugin);
+                    univer.registerPlugin(UniverSheetsUIPlugin);
+
+                    console.log('Step 5: Creating workbook...');
+                    statusEl.textContent = 'Creating workbook...';
+
+                    // Create a simple workbook
+                    const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                        id: 'test',
+                        name: 'Test Sheet',
+                        sheets: [
+                            {
+                                id: 's1',
+                                name: 'Sheet1',
+                                rowCount: 100,
+                                columnCount: 20,
+                                cellData: {
+                                    0: {
+                                        0: { v: 'Hello' },
+                                        1: { v: 'Univer' }
+                                    },
+                                    1: {
+                                        0: { v: 'Test' },
+                                        1: { v: 'Data' }
+                                    }
+                                }
+                            }
+                        ]
+                    });
+
+                    console.log('✅ SUCCESS! Univer is running!');
+                    statusEl.textContent = '✅ Univer is working!';
+                    statusEl.style.background = 'green';
+
+                    window.univer = univer;
+                    window.workbook = workbook;
+
+                } catch (error) {
+                    console.error('❌ ERROR:', error);
+                    statusEl.textContent = '❌ Error: ' + error.message;
+                    statusEl.style.background = 'red';
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

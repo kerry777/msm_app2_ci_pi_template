@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer - Pivot & Chart 지원 버전</title>
+
+    <!-- Fix getLocation first -->
+    <script>
+        window.getLocation = () => ({ pathname: '/', search: '', hash: '', state: null });
+        Object.prototype.getLocation = window.getLocation;
+    </script>
+
+    <!-- Dependencies - 0.4.1 버전 사용 -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/rxjs@7.8.1/dist/bundles/rxjs.umd.min.js"></script>
+    <script src="https://unpkg.com/@wendellhu/redi@0.16.4/dist/umd/index.js"></script>
+
+    <!-- Univer CSS - 0.4.1 버전 -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@0.4.1/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@0.4.1/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@0.4.1/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-numfmt@0.4.1/lib/index.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #app {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Force visibility */
+        #app > * {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .univer-container {
+            width: 100% !important;
+            height: 100% !important;
+            display: block !important;
+        }
+
+        .status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border-radius: 5px;
+            z-index: 999999;
+        }
+
+        .status.success { background: green; }
+        .status.error { background: red; }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Loading...</div>
+    <div id="app"></div>
+
+    <!-- Load Univer 0.4.1 with all plugins -->
+    <script src="https://unpkg.com/@univerjs/protocol@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/core@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/design@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/engine-render@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/engine-formula@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-formula@0.4.1/lib/umd/index.js"></script>
+
+    <!-- Pivot & Chart 플러그인 추가 -->
+    <script src="https://unpkg.com/@univerjs/sheets-pivot@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-pivot-ui@0.4.1/lib/umd/index.js"></script>
+
+    <script>
+        window.addEventListener('error', (e) => {
+            if (e.message?.includes('getLocation') || e.message?.includes('SelectionRenderService')) {
+                e.preventDefault();
+                return false;
+            }
+        }, true);
+
+        async function waitForModules() {
+            return new Promise(resolve => {
+                const check = setInterval(() => {
+                    if (window.UniverCore && window.UniverUi && window.UniverSheets && window.UniverSheetsUi) {
+                        clearInterval(check);
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+
+        async function init() {
+            const status = document.getElementById('status');
+
+            try {
+                status.textContent = 'Waiting for modules...';
+                await waitForModules();
+
+                // Get Univer and plugins - 0.4.1 버전 구조
+                const UniverCore = window.UniverCore;
+                if (!UniverCore) {
+                    throw new Error('UniverCore not loaded');
+                }
+
+                // Univer 클래스 찾기
+                const Univer = UniverCore.Univer || UniverCore.default || window.Univer;
+                const UniverInstanceType = UniverCore.UniverInstanceType || { UNIVER_SHEET: 1 };
+                const LocaleType = UniverCore.LocaleType || { EN_US: 'en-US' };
+
+                if (!Univer) {
+                    console.error('Available UniverCore keys:', Object.keys(UniverCore));
+                    throw new Error('Univer class not found in UniverCore');
+                }
+
+                console.log('Univer class found:', typeof Univer);
+
+                // Check for render engine
+                const hasRenderEngine = window.UniverEngineRender || window.UniverRenderEngine;
+                console.log('Render engine available:', !!hasRenderEngine);
+
+                // Create Univer instance - 0.4.1 방식
+                const univer = new Univer({
+                    theme: window.UniverDesign?.defaultTheme || {},
+                    locale: LocaleType.EN_US || 'en-US',
+                    locales: {
+                        'en-US': {}  // 빈 locale로 시작
+                    }
+                });
+
+                status.textContent = 'Registering render engine...';
+
+                // Register render engine FIRST if available - 0.4.1 방식
+                if (window.UniverEngineRender?.UniverRenderEnginePlugin) {
+                    console.log('Registering render engine plugin');
+                    univer.registerPlugin(window.UniverEngineRender.UniverRenderEnginePlugin);
+                }
+
+                // Register formula engine
+                if (window.UniverEngineFormula?.UniverFormulaEnginePlugin) {
+                    console.log('Registering formula engine plugin');
+                    univer.registerPlugin(window.UniverEngineFormula.UniverFormulaEnginePlugin);
+                }
+
+                status.textContent = 'Registering UI plugin...';
+
+                // Register UI plugin with DOM element directly
+                const appElement = document.getElementById('app');
+
+                if (window.UniverUi?.UniverUIPlugin) {
+                    console.log('Registering UI plugin');
+                    univer.registerPlugin(window.UniverUi.UniverUIPlugin, {
+                        container: appElement, // Pass the actual DOM element
+                        header: true,
+                        footer: false
+                    });
+                }
+
+                status.textContent = 'Registering sheets plugins...';
+
+                // Register sheets plugins - 0.4.1 방식
+                if (window.UniverSheets?.UniverSheetsPlugin) {
+                    console.log('Registering sheets plugin');
+                    univer.registerPlugin(window.UniverSheets.UniverSheetsPlugin);
+                }
+
+                if (window.UniverSheetsUi?.UniverSheetsUIPlugin) {
+                    console.log('Registering sheets UI plugin');
+                    univer.registerPlugin(window.UniverSheetsUi.UniverSheetsUIPlugin);
+                }
+
+                // Formula plugin
+                if (window.UniverSheetsFormula?.UniverSheetsFormulaPlugin) {
+                    console.log('Registering sheets formula plugin');
+                    univer.registerPlugin(window.UniverSheetsFormula.UniverSheetsFormulaPlugin);
+                }
+
+                // Pivot plugin if available
+                if (window.UniverSheetsPivot?.UniverSheetsPivotPlugin) {
+                    console.log('Registering pivot plugin');
+                    univer.registerPlugin(window.UniverSheetsPivot.UniverSheetsPivotPlugin);
+                }
+
+                if (window.UniverSheetsPivotUi?.UniverSheetsPivotUIPlugin) {
+                    console.log('Registering pivot UI plugin');
+                    univer.registerPlugin(window.UniverSheetsPivotUi.UniverSheetsPivotUIPlugin);
+                }
+
+                status.textContent = 'Creating workbook...';
+
+                // MSM 의료용품 데이터로 워크북 생성 (Pivot/Chart 테스트용)
+                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                    id: 'msm-workbook',
+                    appVersion: '0.4.1',
+                    name: 'MSM 의료용품 견적서',
+                    locale: 'en-US',
+                    styles: {},
+                    sheetOrder: ['sheet-01'],
+                    sheets: {
+                        'sheet-01': {
+                            id: 'sheet-01',
+                            name: '견적서',
+                            tabColor: '',
+                            hidden: 0,
+                            rowCount: 100,
+                            columnCount: 20,
+                            zoomRatio: 1,
+                            scrollTop: 0,
+                            scrollLeft: 0,
+                            defaultRowHeight: 25,
+                            defaultColumnWidth: 100,
+                            cellData: {
+                                0: {  // 헤더 행
+                                    0: { v: '품목코드', s: null },
+                                    1: { v: '품목명', s: null },
+                                    2: { v: '카테고리', s: null },
+                                    3: { v: '규격', s: null },
+                                    4: { v: '수량', s: null },
+                                    5: { v: '단가', s: null },
+                                    6: { v: '금액', s: null },
+                                    7: { v: '공급처', s: null },
+                                    8: { v: '비고', s: null }
+                                },
+                                1: {
+                                    0: { v: 'MD-001', s: null },
+                                    1: { v: '수술용 메스', s: null },
+                                    2: { v: '수술용품', s: null },
+                                    3: { v: '일회용', s: null },
+                                    4: { v: 100, s: null },
+                                    5: { v: 5000, s: null },
+                                    6: { v: 500000, s: null },
+                                    7: { v: '메디칼서플라이', s: null },
+                                    8: { v: '긴급', s: null }
+                                },
+                                2: {
+                                    0: { v: 'MD-002', s: null },
+                                    1: { v: '의료용 거즈', s: null },
+                                    2: { v: '소모품', s: null },
+                                    3: { v: '10x10cm', s: null },
+                                    4: { v: 500, s: null },
+                                    5: { v: 1000, s: null },
+                                    6: { v: 500000, s: null },
+                                    7: { v: '한국메디칼', s: null },
+                                    8: { v: '', s: null }
+                                },
+                                3: {
+                                    0: { v: 'MD-003', s: null },
+                                    1: { v: '주사기', s: null },
+                                    2: { v: '주사용품', s: null },
+                                    3: { v: '5ml', s: null },
+                                    4: { v: 200, s: null },
+                                    5: { v: 3000, s: null },
+                                    6: { v: 600000, s: null },
+                                    7: { v: '메디칼서플라이', s: null },
+                                    8: { v: '', s: null }
+                                },
+                                4: {
+                                    0: { v: 'MD-004', s: null },
+                                    1: { v: '수액세트', s: null },
+                                    2: { v: '수액용품', s: null },
+                                    3: { v: '표준형', s: null },
+                                    4: { v: 150, s: null },
+                                    5: { v: 8000, s: null },
+                                    6: { v: 1200000, s: null },
+                                    7: { v: '글로벌메드', s: null },
+                                    8: { v: '재고확인', s: null }
+                                },
+                                5: {
+                                    0: { v: 'MD-005', s: null },
+                                    1: { v: '진단키트', s: null },
+                                    2: { v: '진단용품', s: null },
+                                    3: { v: 'COVID-19', s: null },
+                                    4: { v: 50, s: null },
+                                    5: { v: 15000, s: null },
+                                    6: { v: 750000, s: null },
+                                    7: { v: '바이오텍', s: null },
+                                    8: { v: '예약주문', s: null }
+                                }
+                            },
+                            rowData: {},
+                            columnData: {
+                                1: { w: 150 },  // 품목명 컬럼 넓게
+                                7: { w: 120 }   // 공급처 컬럼 넓게
+                            },
+                            showGridlines: 1,
+                            selections: ['A1'],
+                            rightToLeft: 0
+                        }
+                    }
+                });
+
+                status.textContent = '✅ SUCCESS!';
+                status.className = 'status success';
+
+                window.univer = univer;
+                window.workbook = workbook;
+
+                // Force refresh/render
+                setTimeout(() => {
+                    console.log('=== Post-init check ===');
+                    const app = document.getElementById('app');
+                    console.log('App children:', app.children.length);
+                    console.log('App HTML:', app.innerHTML ? 'Has content' : 'Empty');
+
+                    // Check for specific Univer elements
+                    console.log('Canvas elements:', document.querySelectorAll('canvas').length);
+                    console.log('.univer elements:', document.querySelectorAll('.univer').length);
+                    console.log('[data-univer] elements:', document.querySelectorAll('[data-univer]').length);
+
+                    // Try to get the render controller
+                    if (window.univer) {
+                        console.log('Univer instance exists');
+                        console.log('Univer methods:', Object.keys(Object.getPrototypeOf(window.univer)));
+                    }
+
+                    // Check if we need to manually trigger render
+                    if (app.children.length === 0) {
+                        console.error('❌ App container is empty!');
+
+                        // Try alternative mount approach
+                        if (window.univer.mount) {
+                            console.log('Trying univer.mount()...');
+                            window.univer.mount(app);
+                        }
+
+                        // Try to get render service
+                        if (window.univer.getService) {
+                            console.log('Checking for render service...');
+                            const renderService = window.univer.getService('RenderService');
+                            if (renderService) {
+                                console.log('Found render service, trying to render...');
+                                renderService.render();
+                            }
+                        }
+                    }
+                }, 1000);
+
+            } catch (error) {
+                status.textContent = 'Error: ' + error.message;
+                status.className = 'status error';
+                console.error('Init failed:', error);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

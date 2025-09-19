@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer Simple Preset - 최소 구성</title>
+
+    <!-- Univer Presets 단일 번들 사용 -->
+    <script src="https://unpkg.com/@univerjs/presets@0.5.2/lib/umd/index.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/presets@0.5.2/lib/index.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        #app { width: 100%; height: 100%; }
+        .info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 99999;
+            max-width: 400px;
+        }
+        .info div { margin: 2px 0; }
+        .success { color: #4CAF50; }
+        .error { color: #F44336; }
+        .warning { color: #FFC107; }
+    </style>
+</head>
+<body>
+    <div class="info" id="info">
+        <div>Univer Simple Preset Loading...</div>
+    </div>
+    <div id="app"></div>
+
+    <script>
+        const info = document.getElementById('info');
+        const log = (msg, type = '') => {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = msg;
+            info.appendChild(div);
+            console.log(msg);
+        };
+
+        // 페이지 로드 완료 대기
+        window.addEventListener('load', async () => {
+            log('Window loaded');
+
+            // 추가 대기
+            await new Promise(r => setTimeout(r, 1000));
+
+            // 전역 객체 체크
+            const univerKeys = Object.keys(window).filter(k =>
+                k.toLowerCase().includes('univer') ||
+                k === 'UniverPresets' ||
+                k === 'UniverPreset'
+            );
+
+            log(`Found keys: ${univerKeys.join(', ')}`, univerKeys.length > 0 ? 'success' : 'error');
+
+            try {
+                // 다양한 전역 이름 시도
+                const preset = window.UniverPresets ||
+                              window.UniverPreset ||
+                              window.univerPresets ||
+                              window.univerPreset ||
+                              window.Univer;
+
+                if (!preset) {
+                    throw new Error('No Univer preset found in window');
+                }
+
+                log('Preset object found', 'success');
+                log(`Preset type: ${typeof preset}`);
+                log(`Preset keys: ${Object.keys(preset).slice(0, 5).join(', ')}...`);
+
+                // createUniver 함수 찾기
+                const createUniver = preset.createUniver ||
+                                    preset.create ||
+                                    preset.init ||
+                                    preset.createInstance;
+
+                if (!createUniver) {
+                    // preset 자체가 함수일 수도 있음
+                    if (typeof preset === 'function') {
+                        log('Preset is a function, trying to call it...', 'warning');
+                        const result = preset({
+                            container: 'app',
+                            locale: 'en-US'
+                        });
+                        log('Function called', 'success');
+                        window.univerInstance = result;
+                    } else {
+                        throw new Error('createUniver function not found');
+                    }
+                } else {
+                    log('createUniver function found', 'success');
+
+                    // Univer 생성
+                    const result = createUniver({
+                        container: 'app',
+                        locale: 'en-US'
+                    });
+
+                    log('Univer created', 'success');
+                    window.univerInstance = result;
+                }
+
+                // DOM 체크
+                setTimeout(() => {
+                    const app = document.getElementById('app');
+                    const stats = {
+                        children: app.children.length,
+                        html: app.innerHTML.length,
+                        canvas: app.querySelectorAll('canvas').length
+                    };
+
+                    if (stats.children > 0) {
+                        log(`✅ Rendered: ${stats.children} elements, ${stats.canvas} canvas`, 'success');
+                    } else {
+                        log('⚠️ No elements rendered', 'warning');
+                    }
+                }, 2000);
+
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+                console.error(error);
+
+                // 모든 전역 Univer 관련 객체 출력
+                const allUniverKeys = Object.keys(window).filter(k =>
+                    k.toLowerCase().includes('univ')
+                );
+                log(`All Univer-like keys: ${allUniverKeys.join(', ')}`);
+            }
+        });
+    </script>
+</body>
+</html>

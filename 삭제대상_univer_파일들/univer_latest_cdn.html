@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer 최신 CDN 버전 테스트</title>
+
+    <!-- 최신 버전 시도 -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/umd/lib/univer.css">
+    <script src="https://unpkg.com/@univerjs/umd/lib/univer.full.umd.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { height: 100vh; overflow: hidden; font-family: sans-serif; }
+        #app { width: 100%; height: 100%; }
+        .status {
+            position: fixed; top: 10px; right: 10px; padding: 10px 20px;
+            background: #4CAF50; color: white; border-radius: 5px; z-index: 9999;
+        }
+        .status.error { background: #F44336; }
+        .status.loading { background: #FFC107; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="status loading" id="status">초기화 중...</div>
+    <div id="app"></div>
+
+    <script>
+        async function initUniver() {
+            const status = document.getElementById('status');
+
+            // 3초 대기 (스크립트 완전 로드)
+            await new Promise(r => setTimeout(r, 3000));
+
+            console.log('=== Univer CDN 테스트 ===');
+
+            // 전역 객체 탐색
+            const univerKeys = Object.keys(window).filter(k =>
+                k.toLowerCase().includes('univer') ||
+                k === 'UniverCore' ||
+                k === 'UniverSheets' ||
+                k === 'UniverDocs'
+            );
+
+            console.log('발견된 키:', univerKeys);
+
+            // 다양한 초기화 방법 시도
+            try {
+                let success = false;
+
+                // 방법 1: UniverCore 직접 사용
+                if (window.UniverCore) {
+                    console.log('✅ UniverCore 발견!');
+                    const { Univer, LocaleType } = window.UniverCore;
+
+                    if (Univer) {
+                        const univer = new Univer({
+                            locale: LocaleType?.EN_US || 'en-US'
+                        });
+
+                        // 기본 플러그인 등록
+                        if (window.UniverUI?.UniverUIPlugin) {
+                            univer.registerPlugin(window.UniverUI.UniverUIPlugin, {
+                                container: document.getElementById('app')
+                            });
+                        }
+
+                        if (window.UniverSheets?.UniverSheetsPlugin) {
+                            univer.registerPlugin(window.UniverSheets.UniverSheetsPlugin);
+                        }
+
+                        // 워크북 생성
+                        univer.createUnit(1, {
+                            id: 'workbook-01',
+                            name: 'MSM 견적서',
+                            sheets: [{
+                                id: 'sheet-01',
+                                name: 'Sheet1'
+                            }]
+                        });
+
+                        success = true;
+                        console.log('✅ UniverCore로 초기화 성공!');
+                    }
+                }
+
+                // 방법 2: window.Univer 직접 사용
+                else if (window.Univer) {
+                    console.log('✅ window.Univer 발견!');
+                    const univer = new window.Univer();
+                    success = true;
+                }
+
+                // 방법 3: univerjs 네임스페이스
+                else if (window.univerjs) {
+                    console.log('✅ window.univerjs 발견!');
+                    if (window.univerjs.Univer) {
+                        const univer = new window.univerjs.Univer();
+                        success = true;
+                    }
+                }
+
+                if (success) {
+                    status.textContent = '✅ Univer 초기화 성공!';
+                    status.className = 'status';
+                    setTimeout(() => status.style.display = 'none', 3000);
+                } else {
+                    throw new Error('Univer 객체를 찾을 수 없습니다');
+                }
+
+            } catch (error) {
+                console.error('❌ 초기화 실패:', error);
+                status.textContent = '❌ ' + error.message;
+                status.className = 'status error';
+
+                // 디버깅 정보
+                console.log('사용 가능한 전역 객체:', univerKeys);
+                console.log('UniverCore:', window.UniverCore);
+                console.log('Univer:', window.Univer);
+                console.log('univerjs:', window.univerjs);
+            }
+
+            // DOM 확인
+            setTimeout(() => {
+                const app = document.getElementById('app');
+                console.log('DOM 상태:', {
+                    children: app.children.length,
+                    html: app.innerHTML.substring(0, 200)
+                });
+            }, 1000);
+        }
+
+        // 페이지 로드 후 실행
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initUniver);
+        } else {
+            initUniver();
+        }
+    </script>
+</body>
+</html>

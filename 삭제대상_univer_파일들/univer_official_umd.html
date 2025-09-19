@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer Excel - 공식 UMD 버전</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        html, body { height: 100%; }
+        #app { height: 100%; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <!-- UMD 번들 직접 사용 -->
+    <script src="https://unpkg.com/@univerjs-pro/facade/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs-pro/facade/lib/umd/locale/en-US.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs-pro/facade/lib/index.css">
+
+    <script>
+        window.onload = function() {
+            // Facade API로 초기화
+            if (window.UniverFacade) {
+                const { FUniver } = window.UniverFacade;
+
+                // Univer 인스턴스 생성
+                const univerAPI = FUniver.newAPI({
+                    locale: 'en-US',
+                    locales: {
+                        'en-US': window.UniverFacadeEnUS
+                    }
+                });
+
+                // 워크북 생성
+                univerAPI.createWorkbook({
+                    name: 'MSM 견적서',
+                    sheets: [{
+                        name: '견적서',
+                        cellData: {
+                            0: {
+                                0: { v: '품목코드' },
+                                1: { v: '품목명' },
+                                2: { v: '규격' },
+                                3: { v: '수량' },
+                                4: { v: '단가' },
+                                5: { v: '금액' }
+                            },
+                            1: {
+                                0: { v: 'MD-001' },
+                                1: { v: '수술용 메스' },
+                                2: { v: '일회용' },
+                                3: { v: 100 },
+                                4: { v: 5000 },
+                                5: { v: 500000 }
+                            }
+                        }
+                    }]
+                });
+
+                console.log('✅ Univer 초기화 성공!');
+            } else {
+                console.error('UniverFacade를 찾을 수 없습니다');
+            }
+        };
+    </script>
+</body>
+</html>

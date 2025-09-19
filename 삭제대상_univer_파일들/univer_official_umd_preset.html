@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer Excel Viewer - 확실한 해결책</title>
+
+    <style>
+        * { margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
+        #container { height: 100%; width: 100%; }
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">Univer 로딩 중...</div>
+    <div id="container"></div>
+
+    <!-- 가장 간단한 CDN 방식 -->
+    <script type="importmap">
+    {
+        "imports": {
+            "@univerjs/core": "https://unpkg.com/@univerjs/core@latest/lib/es/index.js",
+            "@univerjs/design": "https://unpkg.com/@univerjs/design@latest/lib/es/index.js",
+            "@univerjs/docs": "https://unpkg.com/@univerjs/docs@latest/lib/es/index.js",
+            "@univerjs/docs-ui": "https://unpkg.com/@univerjs/docs-ui@latest/lib/es/index.js",
+            "@univerjs/engine-formula": "https://unpkg.com/@univerjs/engine-formula@latest/lib/es/index.js",
+            "@univerjs/engine-render": "https://unpkg.com/@univerjs/engine-render@latest/lib/es/index.js",
+            "@univerjs/sheets": "https://unpkg.com/@univerjs/sheets@latest/lib/es/index.js",
+            "@univerjs/sheets-formula": "https://unpkg.com/@univerjs/sheets-formula@latest/lib/es/index.js",
+            "@univerjs/sheets-ui": "https://unpkg.com/@univerjs/sheets-ui@latest/lib/es/index.js",
+            "@univerjs/ui": "https://unpkg.com/@univerjs/ui@latest/lib/es/index.js"
+        }
+    }
+    </script>
+
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@latest/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@latest/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@latest/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-formula@latest/lib/index.css">
+
+    <script type="module">
+        import { Univer, UniverInstanceType, LocaleType } from '@univerjs/core';
+        import { defaultTheme } from '@univerjs/design';
+        import { UniverDocsPlugin } from '@univerjs/docs';
+        import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
+        import { UniverFormulaEnginePlugin } from '@univerjs/engine-formula';
+        import { UniverRenderEnginePlugin } from '@univerjs/engine-render';
+        import { UniverSheetsPlugin } from '@univerjs/sheets';
+        import { UniverSheetsFormulaPlugin } from '@univerjs/sheets-formula';
+        import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui';
+        import { UniverUIPlugin } from '@univerjs/ui';
+
+        // Univer 초기화
+        const univer = new Univer({
+            theme: defaultTheme,
+            locale: LocaleType.EN_US,
+        });
+
+        // 플러그인 등록
+        univer.registerPlugin(UniverRenderEnginePlugin);
+        univer.registerPlugin(UniverFormulaEnginePlugin);
+        univer.registerPlugin(UniverUIPlugin, {
+            container: document.getElementById('container'),
+        });
+
+        univer.registerPlugin(UniverDocsPlugin);
+        univer.registerPlugin(UniverDocsUIPlugin);
+        univer.registerPlugin(UniverSheetsPlugin);
+        univer.registerPlugin(UniverSheetsUIPlugin);
+        univer.registerPlugin(UniverSheetsFormulaPlugin);
+
+        // 워크북 생성
+        univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+            id: 'sheet',
+            appVersion: '0.1.0',
+            name: 'MSM 견적서',
+            sheets: {
+                sheet1: {
+                    id: 'sheet1',
+                    name: '견적서',
+                    cellData: {
+                        0: {
+                            0: { v: '품목코드' },
+                            1: { v: '품목명' },
+                            2: { v: '규격' },
+                            3: { v: '수량' },
+                            4: { v: '단가' },
+                            5: { v: '금액' },
+                            6: { v: '비고' }
+                        },
+                        1: {
+                            0: { v: 'MD-001' },
+                            1: { v: '수술용 메스' },
+                            2: { v: '일회용' },
+                            3: { v: 100 },
+                            4: { v: 5000 },
+                            5: { v: 500000 },
+                            6: { v: '긴급' }
+                        },
+                        2: {
+                            0: { v: 'MD-002' },
+                            1: { v: '의료용 거즈' },
+                            2: { v: '10x10cm' },
+                            3: { v: 500 },
+                            4: { v: 1000 },
+                            5: { v: 500000 },
+                            6: { v: '' }
+                        }
+                    },
+                    rowCount: 100,
+                    columnCount: 20
+                }
+            }
+        });
+
+        // 로딩 메시지 숨기기
+        document.getElementById('loading').style.display = 'none';
+
+        console.log('✅ Univer 초기화 완료!');
+        window.univer = univer;
+    </script>
+</body>
+</html>

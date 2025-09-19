@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luckysheet Excel Viewer</title>
+
+    <!-- Luckysheet CSS -->
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/css/pluginsCss.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/plugins.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/css/luckysheet.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/assets/iconfont/iconfont.css' />
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; }
+        #luckysheet { width: 100%; height: 100%; }
+        .status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border-radius: 5px;
+            z-index: 999999;
+            display: none;
+        }
+        .status.show { display: block; }
+        .status.error { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Loading...</div>
+    <div id="luckysheet"></div>
+
+    <!-- Luckysheet JS -->
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet@latest/dist/luckysheet.umd.js"></script>
+
+    <script>
+        const status = document.getElementById('status');
+        status.className = 'status show';
+
+        window.addEventListener('load', function() {
+            try {
+                // Sample data
+                const celldata = [
+                    {
+                        "r": 0,
+                        "c": 0,
+                        "v": {
+                            "v": "품목코드",
+                            "bl": 1,
+                            "bg": "#f1f1f1"
+                        }
+                    },
+                    {
+                        "r": 0,
+                        "c": 1,
+                        "v": {
+                            "v": "품목명",
+                            "bl": 1,
+                            "bg": "#f1f1f1"
+                        }
+                    },
+                    {
+                        "r": 0,
+                        "c": 2,
+                        "v": {
+                            "v": "수량",
+                            "bl": 1,
+                            "bg": "#f1f1f1"
+                        }
+                    },
+                    {
+                        "r": 0,
+                        "c": 3,
+                        "v": {
+                            "v": "단가",
+                            "bl": 1,
+                            "bg": "#f1f1f1"
+                        }
+                    },
+                    {
+                        "r": 0,
+                        "c": 4,
+                        "v": {
+                            "v": "금액",
+                            "bl": 1,
+                            "bg": "#f1f1f1"
+                        }
+                    },
+                    {
+                        "r": 1,
+                        "c": 0,
+                        "v": {
+                            "v": "MD-001"
+                        }
+                    },
+                    {
+                        "r": 1,
+                        "c": 1,
+                        "v": {
+                            "v": "수술용 메스"
+                        }
+                    },
+                    {
+                        "r": 1,
+                        "c": 2,
+                        "v": {
+                            "v": 100,
+                            "ct": {"fa": "General", "t": "n"}
+                        }
+                    },
+                    {
+                        "r": 1,
+                        "c": 3,
+                        "v": {
+                            "v": 5000,
+                            "ct": {"fa": "General", "t": "n"}
+                        }
+                    },
+                    {
+                        "r": 1,
+                        "c": 4,
+                        "v": {
+                            "v": 500000,
+                            "ct": {"fa": "General", "t": "n"}
+                        }
+                    }
+                ];
+
+                // Luckysheet options
+                const options = {
+                    container: 'luckysheet',
+                    title: 'MSM Excel Viewer',
+                    lang: 'ko',
+                    data: [
+                        {
+                            "name": "견적서",
+                            "color": "",
+                            "status": 1,
+                            "order": 0,
+                            "celldata": celldata,
+                            "index": 0,
+                            "row": 100,
+                            "column": 20,
+                            "config": {
+                                "columnlen": {
+                                    "0": 100,
+                                    "1": 200,
+                                    "2": 80,
+                                    "3": 100,
+                                    "4": 120
+                                }
+                            }
+                        }
+                    ],
+                    showinfobar: false,
+                    showsheetbar: true,
+                    showtoolbar: true,
+                    showstatisticBar: true,
+                    sheetFormulaBar: true,
+                    allowEdit: true,
+                    enableAddRow: true,
+                    enableAddBackTop: true,
+                    functionButton: '<button id="export-btn" class="btn btn-primary">Export</button>'
+                };
+
+                // Initialize Luckysheet
+                luckysheet.create(options);
+
+                status.textContent = '✅ Luckysheet is ready!';
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+
+                console.log('✅ Luckysheet initialized successfully!');
+
+                // Flutter integration
+                if (window.parent !== window) {
+                    window.parent.postMessage('luckysheet_ready', '*');
+                }
+
+                // Message handler
+                window.addEventListener('message', function(event) {
+                    if (event.data && event.data.action === 'loadExcel') {
+                        console.log('Loading Excel file:', event.data.filePath);
+                        // Excel load logic
+                    }
+                });
+
+            } catch (error) {
+                console.error('Luckysheet init error:', error);
+                status.textContent = '❌ Error: ' + error.message;
+                status.className = 'status show error';
+            }
+        });
+    </script>
+</body>
+</html>

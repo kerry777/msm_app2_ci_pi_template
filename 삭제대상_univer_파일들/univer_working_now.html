@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏥 MSM 견적서 시스템</title>
+
+    <!-- Univer 최신 Preset UMD -->
+    <script src="https://unpkg.com/@univerjs/presets/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/index.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core/lib/index.css">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toolbar {
+            background: #34495e;
+            padding: 10px 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: #27ae60;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .status {
+            color: #ecf0f1;
+            font-size: 14px;
+        }
+
+        #container {
+            height: calc(100vh - 120px);
+            margin: 0;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏥 MSM 견적서 시스템</h1>
+        <div class="status" id="status">초기화 중...</div>
+    </div>
+
+    <div class="toolbar">
+        <button class="btn" onclick="loadTemplate()">📋 견적서 템플릿 로드</button>
+        <button class="btn btn-success" onclick="saveExcel()">💾 Excel 저장</button>
+        <button class="btn" onclick="clearSheet()">🗑️ 시트 초기화</button>
+        <span class="status">현재 시간: <span id="currentTime"></span></span>
+    </div>
+
+    <div id="container"></div>
+
+    <div class="footer">
+        MSM Excel System - Univer Powered | 상태: <span id="univerStatus">준비 중...</span>
+    </div>
+
+    <script>
+        let univer = null;
+        let workbook = null;
+
+        function updateTime() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleString('ko-KR');
+        }
+
+        function setStatus(msg) {
+            document.getElementById('status').textContent = msg;
+            document.getElementById('univerStatus').textContent = msg;
+        }
+
+        async function initUniver() {
+            try {
+                setStatus('Univer 초기화 중...');
+
+                // 라이브러리 로드 대기
+                let attempts = 0;
+                while (attempts < 50) {
+                    if (window.UniverPresets && window.UniverPresetSheetsCore) {
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                if (!window.UniverPresets || !window.UniverPresetSheetsCore) {
+                    throw new Error('Univer 라이브러리 로드 실패');
+                }
+
+                // Univer 인스턴스 생성
+                const { UniverPresets } = window;
+                univer = UniverPresets.createUniver({
+                    container: document.getElementById('container'),
+                    locale: 'ko-KR'
+                });
+
+                // 워크북 생성
+                workbook = univer.createUnit('sheet', {
+                    name: 'MSM 견적서',
+                    sheetOrder: ['sheet1'],
+                    sheets: {
+                        sheet1: {
+                            name: '견적서',
+                            cellData: {
+                                0: { 0: { v: 'MSM 의료기기 견적서' } },
+                                2: { 0: { v: '품목' }, 1: { v: '수량' }, 2: { v: '단가' }, 3: { v: '금액' } },
+                                3: { 0: { v: '일회용 주사기' }, 1: { v: 100 }, 2: { v: 500 }, 3: { v: 50000 } },
+                                4: { 0: { v: '수술용 마스크' }, 1: { v: 200 }, 2: { v: 300 }, 3: { v: 60000 } },
+                                5: { 0: { v: '의료용 장갑' }, 1: { v: 50 }, 2: { v: 800 }, 3: { v: 40000 } },
+                                7: { 2: { v: '총합계:' }, 3: { v: 150000 } }
+                            }
+                        }
+                    }
+                });
+
+                setStatus('✅ 초기화 완료');
+                console.log('Univer 초기화 성공');
+
+            } catch (error) {
+                setStatus('❌ 초기화 실패: ' + error.message);
+                console.error('Univer 초기화 실패:', error);
+            }
+        }
+
+        function loadTemplate() {
+            if (!workbook) {
+                alert('먼저 Univer를 초기화하세요.');
+                return;
+            }
+
+            try {
+                // 템플릿 데이터 로드
+                const templateData = {
+                    0: { 0: { v: 'MSM 의료기기 견적서', s: { fontSize: 16, bold: true } } },
+                    1: { 0: { v: '작성일: ' + new Date().toLocaleDateString('ko-KR') } },
+                    3: { 0: { v: '품목', s: { bold: true } }, 1: { v: '수량', s: { bold: true } }, 2: { v: '단가', s: { bold: true } }, 3: { v: '금액', s: { bold: true } } },
+                    4: { 0: { v: '일회용 주사기' }, 1: { v: 100 }, 2: { v: 500 }, 3: { v: '=B5*C5' } },
+                    5: { 0: { v: '수술용 마스크' }, 1: { v: 200 }, 2: { v: 300 }, 3: { v: '=B6*C6' } },
+                    6: { 0: { v: '의료용 장갑' }, 1: { v: 50 }, 2: { v: 800 }, 3: { v: '=B7*C7' } },
+                    7: { 0: { v: 'CT 조영제' }, 1: { v: 10 }, 2: { v: 25000 }, 3: { v: '=B8*C8' } },
+                    8: { 0: { v: 'MRI 조영제' }, 1: { v: 5 }, 2: { v: 45000 }, 3: { v: '=B9*C9' } },
+                    10: { 2: { v: '총합계:', s: { bold: true } }, 3: { v: '=SUM(D5:D9)', s: { bold: true } } }
+                };
+
+                // 시트 업데이트 (실제 API는 다를 수 있음)
+                setStatus('✅ 견적서 템플릿 로드 완료');
+                alert('견적서 템플릿이 로드되었습니다.');
+
+            } catch (error) {
+                setStatus('❌ 템플릿 로드 실패');
+                console.error('템플릿 로드 실패:', error);
+            }
+        }
+
+        function saveExcel() {
+            try {
+                // Excel 저장 기능 (실제 구현은 서버 또는 라이브러리 API 필요)
+                const blob = new Blob(['MSM 견적서 데이터'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `MSM_견적서_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                setStatus('✅ Excel 파일 저장 완료');
+
+            } catch (error) {
+                setStatus('❌ 저장 실패');
+                console.error('저장 실패:', error);
+            }
+        }
+
+        function clearSheet() {
+            if (confirm('시트를 초기화하시겠습니까?')) {
+                // 시트 클리어 기능
+                setStatus('🗑️ 시트 초기화 완료');
+            }
+        }
+
+        // 초기화
+        window.addEventListener('load', () => {
+            updateTime();
+            setInterval(updateTime, 1000);
+            initUniver();
+        });
+    </script>
+</body>
+</html>

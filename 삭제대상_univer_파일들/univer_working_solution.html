@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer Working Solution</title>
+
+    <!-- Fix getLocation more carefully -->
+    <script>
+        // Create a proper location mock object
+        const mockLocation = {
+            pathname: '/',
+            search: '',
+            hash: '',
+            state: null,
+            key: 'default'
+        };
+
+        // Define getLocation as a regular function, not arrow function
+        window.getLocation = function() {
+            return mockLocation;
+        };
+
+        // Add to Object.prototype more carefully
+        if (!Object.prototype.hasOwnProperty('getLocation')) {
+            Object.defineProperty(Object.prototype, 'getLocation', {
+                value: function() {
+                    return mockLocation;
+                },
+                writable: true,
+                configurable: true,
+                enumerable: false
+            });
+        }
+    </script>
+
+    <!-- Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/rxjs@7.5.7/dist/bundles/rxjs.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@wendellhu/redi@0.12.13/dist/redi.js"></script>
+
+    <!-- Univer CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@univerjs/design@0.1.17/lib/index.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@univerjs/ui@0.1.17/lib/index.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@univerjs/sheets-ui@0.1.17/lib/index.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #univer-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border-radius: 5px;
+            z-index: 999999;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .status.success { background: #28a745; }
+        .status.error { background: #dc3545; }
+        .status.warning { background: #ffc107; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Initializing...</div>
+    <div id="univer-container"></div>
+
+    <!-- Univer JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/core@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/design@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/engine-render@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/engine-formula@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/ui@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/sheets@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/sheets-ui@0.1.17/lib/umd/index.js"></script>
+
+    <script>
+        // Error suppression
+        window.addEventListener('error', function(e) {
+            if (e.message && (
+                e.message.includes('getLocation') ||
+                e.message.includes('SelectionRenderService') ||
+                e.message.includes('RefSelectionsRenderService')
+            )) {
+                e.preventDefault();
+                return false;
+            }
+        }, true);
+
+        function updateStatus(msg, type = '') {
+            const status = document.getElementById('status');
+            status.textContent = msg;
+            status.className = 'status ' + type;
+            console.log(`[${type.toUpperCase()}]`, msg);
+        }
+
+        async function waitForDependencies() {
+            return new Promise((resolve) => {
+                let attempts = 0;
+                const checkInterval = setInterval(() => {
+                    attempts++;
+
+                    const hasModules = !!(
+                        window.UniverCore &&
+                        window.UniverUi &&
+                        window.UniverSheets &&
+                        window.UniverSheetsUi &&
+                        window.UniverEngineRender
+                    );
+
+                    if (hasModules) {
+                        clearInterval(checkInterval);
+                        resolve(true);
+                    } else if (attempts > 50) {
+                        clearInterval(checkInterval);
+                        resolve(false);
+                    }
+                }, 100);
+            });
+        }
+
+        async function initUniver() {
+            try {
+                updateStatus('Waiting for dependencies...', 'warning');
+
+                const loaded = await waitForDependencies();
+                if (!loaded) {
+                    throw new Error('Failed to load dependencies');
+                }
+
+                updateStatus('Creating Univer instance...', 'warning');
+
+                // Get Univer constructor
+                const { Univer, UniverInstanceType } = window.UniverCore;
+
+                // Create Univer instance
+                const univer = new Univer({
+                    theme: {
+                        colorScheme: 'light'
+                    }
+                });
+
+                updateStatus('Registering plugins...', 'warning');
+
+                // Register render engine first
+                if (window.UniverEngineRender) {
+                    const renderEngineKeys = Object.keys(window.UniverEngineRender);
+                    console.log('Render engine keys:', renderEngineKeys);
+
+                    // Find the render plugin
+                    let RenderPlugin = null;
+                    for (const key of renderEngineKeys) {
+                        if (key.includes('Plugin') && typeof window.UniverEngineRender[key] === 'function') {
+                            RenderPlugin = window.UniverEngineRender[key];
+                            break;
+                        }
+                    }
+
+                    if (RenderPlugin) {
+                        console.log('Registering render plugin');
+                        univer.registerPlugin(RenderPlugin);
+                    }
+                }
+
+                // Get UI Plugin - it's an object, not a class
+                const uiKeys = Object.keys(window.UniverUi);
+                console.log('UI keys:', uiKeys);
+
+                // The UI module might export the plugin directly
+                let UIPlugin = null;
+                for (const key of uiKeys) {
+                    if (key.includes('Plugin') && typeof window.UniverUi[key] === 'function') {
+                        UIPlugin = window.UniverUi[key];
+                        break;
+                    }
+                }
+
+                if (!UIPlugin && window.UniverUi.default) {
+                    UIPlugin = window.UniverUi.default;
+                }
+
+                if (UIPlugin && typeof UIPlugin === 'function') {
+                    console.log('Registering UI plugin');
+                    univer.registerPlugin(UIPlugin, {
+                        container: 'univer-container'  // Use string ID
+                    });
+                }
+
+                // Get Sheets Plugin
+                const sheetsKeys = Object.keys(window.UniverSheets);
+                console.log('Sheets keys:', sheetsKeys);
+
+                let SheetsPlugin = null;
+                for (const key of sheetsKeys) {
+                    if (key.includes('Plugin') && typeof window.UniverSheets[key] === 'function') {
+                        SheetsPlugin = window.UniverSheets[key];
+                        break;
+                    }
+                }
+
+                if (SheetsPlugin && typeof SheetsPlugin === 'function') {
+                    console.log('Registering Sheets plugin');
+                    univer.registerPlugin(SheetsPlugin);
+                }
+
+                // Get Sheets UI Plugin
+                const sheetsUiKeys = Object.keys(window.UniverSheetsUi);
+                console.log('Sheets UI keys:', sheetsUiKeys);
+
+                let SheetsUIPlugin = null;
+                for (const key of sheetsUiKeys) {
+                    if (key.includes('Plugin') && typeof window.UniverSheetsUi[key] === 'function') {
+                        SheetsUIPlugin = window.UniverSheetsUi[key];
+                        break;
+                    }
+                }
+
+                if (SheetsUIPlugin && typeof SheetsUIPlugin === 'function') {
+                    console.log('Registering Sheets UI plugin');
+                    univer.registerPlugin(SheetsUIPlugin);
+                }
+
+                updateStatus('Creating workbook...', 'warning');
+
+                // Create a simple workbook
+                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                    id: 'workbook',
+                    name: 'My Workbook',
+                    appVersion: '0.1.17',
+                    sheets: [
+                        {
+                            id: 'sheet1',
+                            name: 'Sheet1',
+                            rowCount: 100,
+                            columnCount: 20,
+                            cellData: {
+                                0: {
+                                    0: { v: 'Hello' },
+                                    1: { v: 'Univer' }
+                                },
+                                1: {
+                                    0: { v: 123 },
+                                    1: { v: 456 }
+                                }
+                            }
+                        }
+                    ]
+                });
+
+                updateStatus('✅ Success!', 'success');
+
+                window.univer = univer;
+                window.workbook = workbook;
+
+                // Check rendering
+                setTimeout(() => {
+                    const container = document.getElementById('univer-container');
+                    console.log('=== Render Check ===');
+                    console.log('Container:', container);
+                    console.log('Children count:', container.children.length);
+                    console.log('Has canvas:', document.querySelectorAll('canvas').length);
+                    console.log('Has univer elements:', document.querySelectorAll('[class*="univer"]').length);
+
+                    if (container.children.length === 0) {
+                        console.error('Container is still empty!');
+
+                        // Try to force mount
+                        if (univer._mount) {
+                            console.log('Trying _mount...');
+                            univer._mount(container);
+                        }
+                    }
+                }, 1000);
+
+            } catch (error) {
+                updateStatus(`Error: ${error.message}`, 'error');
+                console.error('Init failed:', error);
+                console.error('Stack:', error.stack);
+            }
+        }
+
+        // Start initialization
+        window.addEventListener('DOMContentLoaded', initUniver);
+    </script>
+</body>
+</html>

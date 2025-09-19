@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Standalone Univer Test</title>
+
+    <!-- Fix getLocation BEFORE anything else loads -->
+    <script>
+        // Add getLocation to Object.prototype
+        Object.prototype.getLocation = function() {
+            return { pathname: '/', search: '', hash: '', state: null, key: 'default' };
+        };
+
+        // Global getLocation
+        window.getLocation = function() {
+            return { pathname: '/', search: '', hash: '', state: null, key: 'global' };
+        };
+    </script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@0.1.17/lib/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@0.1.17/lib/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/index.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        #app {
+            width: 100vw;
+            height: 100vh;
+        }
+        #status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            z-index: 10000;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Loading...</div>
+    <div id="app"></div>
+
+    <!-- React -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+
+    <!-- Univer 0.1.17 -->
+    <script src="https://unpkg.com/@univerjs/core@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/design@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/umd/index.js"></script>
+
+    <script>
+        // Block getLocation errors
+        window.addEventListener('error', function(e) {
+            if (e.message && e.message.includes('getLocation')) {
+                e.preventDefault();
+                return false;
+            }
+        }, true);
+
+        // Wait for page to load
+        window.addEventListener('load', function() {
+            document.getElementById('status').textContent = 'Checking modules...';
+
+            // Check if modules are loaded
+            setTimeout(function() {
+                if (window.UniverCore && window.UniverCore.Univer) {
+                    document.getElementById('status').textContent = 'Initializing...';
+                    initializeUniver();
+                } else {
+                    document.getElementById('status').textContent = 'Module load failed!';
+                }
+            }, 2000);
+        });
+
+        function initializeUniver() {
+            try {
+                const { Univer, UniverInstanceType } = window.UniverCore;
+                const { UniverUIPlugin } = window.UniverUi;
+                const { UniverSheetsPlugin } = window.UniverSheets;
+                const { UniverSheetsUIPlugin } = window.UniverSheetsUi;
+
+                // Create Univer instance
+                const univer = new Univer({
+                    locale: 'ko-KR'
+                });
+
+                // Register plugins
+                univer.registerPlugin(UniverUIPlugin, {
+                    container: document.getElementById('app')
+                });
+                univer.registerPlugin(UniverSheetsPlugin);
+                univer.registerPlugin(UniverSheetsUIPlugin);
+
+                // Create workbook with data
+                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                    id: 'test-workbook',
+                    name: 'Quotation',
+                    sheetOrder: ['sheet-1'],
+                    sheets: {
+                        'sheet-1': {
+                            id: 'sheet-1',
+                            name: 'Sheet1',
+                            rowCount: 50,
+                            columnCount: 10,
+                            cellData: {
+                                0: {
+                                    0: { v: 'Item Code' },
+                                    1: { v: 'Item Name' },
+                                    2: { v: 'Qty' },
+                                    3: { v: 'Price' },
+                                    4: { v: 'Total' }
+                                },
+                                1: {
+                                    0: { v: 'M001' },
+                                    1: { v: 'Medical Device A' },
+                                    2: { v: 10 },
+                                    3: { v: 5000 },
+                                    4: { v: 50000 }
+                                },
+                                2: {
+                                    0: { v: 'M002' },
+                                    1: { v: 'Medical Device B' },
+                                    2: { v: 5 },
+                                    3: { v: 10000 },
+                                    4: { v: 50000 }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                document.getElementById('status').textContent = '✅ Success!';
+
+                // Log debug info
+                console.log('Univer initialized!');
+                console.log('Canvas:', document.querySelectorAll('canvas'));
+                console.log('Container:', document.getElementById('app'));
+
+                // Hide status after 3 seconds
+                setTimeout(function() {
+                    document.getElementById('status').style.display = 'none';
+                }, 3000);
+
+            } catch (error) {
+                document.getElementById('status').textContent = 'Error: ' + error.message;
+                console.error('Init failed:', error);
+            }
+        }
+    </script>
+</body>
+</html>

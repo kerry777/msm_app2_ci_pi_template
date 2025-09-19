@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer with Presets</title>
+
+    <!-- Fix getLocation error -->
+    <script>
+        window.getLocation = () => ({ pathname: '/', search: '', hash: '', state: null });
+        Object.prototype.getLocation = window.getLocation;
+    </script>
+
+    <!-- Univer Presets CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/presets@0.1.17/lib/styles/preset-sheets-en-US.css">
+
+    <style>
+        body { margin: 0; font-family: sans-serif; }
+        #app { width: 100vw; height: 100vh; }
+        #status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border-radius: 5px;
+            z-index: 999999;
+        }
+        #status.success { background: green; }
+        #status.error { background: red; }
+    </style>
+</head>
+<body>
+    <div id="status">Loading Univer Presets...</div>
+    <div id="app"></div>
+
+    <!-- Use Univer Presets (includes all dependencies) -->
+    <script src="https://unpkg.com/@univerjs/presets@0.1.17/lib/preset-sheets-en-US.js"></script>
+
+    <script>
+        // Error suppression
+        window.addEventListener('error', (e) => {
+            if (e.message?.includes('getLocation')) {
+                e.preventDefault();
+                return false;
+            }
+        }, true);
+
+        // Initialize after load
+        window.addEventListener('DOMContentLoaded', () => {
+            const status = document.getElementById('status');
+
+            // Wait for preset to load
+            let attempts = 0;
+            const checkPreset = setInterval(() => {
+                attempts++;
+
+                console.log('Checking for UniverPresets...', window.UniverPresets);
+
+                if (window.UniverPresets || window.UniverSheetsPresetEnUS) {
+                    clearInterval(checkPreset);
+                    initWithPreset();
+                } else if (attempts > 50) {
+                    clearInterval(checkPreset);
+                    status.textContent = 'Failed to load presets';
+                    status.className = 'status error';
+                    console.error('No presets found after 5 seconds');
+
+                    // Log what's available
+                    console.log('Window keys containing Univer:',
+                        Object.keys(window).filter(k => k.toLowerCase().includes('univer'))
+                    );
+                }
+            }, 100);
+        });
+
+        function initWithPreset() {
+            try {
+                const status = document.getElementById('status');
+                status.textContent = 'Initializing with preset...';
+
+                // Try different preset names
+                const preset = window.UniverSheetsPresetEnUS ||
+                              window.UniverPresets?.UniverSheetsPresetEnUS ||
+                              window.UniverPresets;
+
+                if (!preset) {
+                    throw new Error('Preset not found');
+                }
+
+                console.log('Using preset:', preset);
+
+                // Initialize with preset
+                let univer;
+                if (typeof preset === 'function') {
+                    // If preset is a function, call it
+                    univer = preset({
+                        container: document.getElementById('app')
+                    });
+                } else if (preset.createUniver) {
+                    // If preset has createUniver method
+                    univer = preset.createUniver({
+                        container: document.getElementById('app')
+                    });
+                } else if (preset.init) {
+                    // If preset has init method
+                    univer = preset.init({
+                        container: document.getElementById('app')
+                    });
+                } else {
+                    throw new Error('Cannot determine how to use preset');
+                }
+
+                // Create initial data if possible
+                if (univer && univer.createUnit) {
+                    const workbook = univer.createUnit(univer.UniverInstanceType?.UNIVER_SHEET || 1, {
+                        id: 'test',
+                        name: 'Test Sheet',
+                        sheets: [{
+                            id: 's1',
+                            name: 'Sheet1',
+                            rowCount: 100,
+                            columnCount: 20,
+                            cellData: {
+                                0: {
+                                    0: { v: 'Hello Univer' }
+                                }
+                            }
+                        }]
+                    });
+                    window.workbook = workbook;
+                }
+
+                window.univer = univer;
+
+                status.textContent = '✅ Univer Preset Loaded!';
+                status.className = 'status success';
+
+                console.log('✅ Success with preset!');
+
+            } catch (error) {
+                const status = document.getElementById('status');
+                status.textContent = 'Error: ' + error.message;
+                status.className = 'status error';
+                console.error('Preset init error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

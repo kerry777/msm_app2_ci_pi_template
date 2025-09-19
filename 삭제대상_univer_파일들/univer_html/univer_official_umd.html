@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏥 MSM Excel 뷰어 - 공식 UMD 버전</title>
+
+    <!-- Univer CSS - Latest Stable Version -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@0.2.17/lib/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@0.2.17/lib/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@0.2.17/lib/index.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .status {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+            font-weight: 500;
+        }
+
+        #app {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .univer-container {
+            height: 100% !important;
+            width: 100% !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏥 MSM Excel 뷰어 - 공식 UMD 버전</h1>
+        <p>더 안정적인 Univer 버전 사용</p>
+    </div>
+
+    <div class="status" id="status">시스템 초기화 중...</div>
+
+    <div id="app"></div>
+
+    <!-- Univer Scripts - Newer Stable Version -->
+    <script src="https://unpkg.com/@univerjs/core@0.2.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/design@0.2.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@0.2.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@0.2.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@0.2.17/lib/umd/index.js"></script>
+
+    <script>
+        function setStatus(message) {
+            document.getElementById('status').textContent = message;
+            console.log('📋 상태:', message);
+        }
+
+        console.log('🚀 MSM 공식 UMD 버전 시작');
+        setStatus('🔧 초기화 중...');
+
+        function debugGlobalObjects() {
+            console.log('🔍 전역 객체 디버깅 (0.2.17):');
+            console.log('  window.UniverCore:', typeof window.UniverCore, window.UniverCore);
+            console.log('  window.UniverUi:', typeof window.UniverUi, window.UniverUi);
+            console.log('  window.UniverSheets:', typeof window.UniverSheets, window.UniverSheets);
+            console.log('  window.UniverSheetsUi:', typeof window.UniverSheetsUi, window.UniverSheetsUi);
+
+            if (window.UniverCore) {
+                console.log('  UniverCore keys:', Object.keys(window.UniverCore));
+                console.log('  UniverCore.Univer:', window.UniverCore.Univer);
+                console.log('  UniverCore.createUniver:', window.UniverCore.createUniver);
+            }
+        }
+
+        function waitForScripts() {
+            debugGlobalObjects();
+
+            if (
+                typeof window.UniverCore === 'undefined' ||
+                typeof window.UniverUi === 'undefined' ||
+                typeof window.UniverSheets === 'undefined' ||
+                typeof window.UniverSheetsUi === 'undefined'
+            ) {
+                console.log('⏳ 스크립트 로딩 대기...');
+                setTimeout(waitForScripts, 200);
+                return;
+            }
+
+            // 키가 있는지 확인
+            if (Object.keys(window.UniverCore).length === 0) {
+                console.log('⚠️ UniverCore가 빈 객체입니다. 재시도...');
+                setTimeout(waitForScripts, 500);
+                return;
+            }
+
+            console.log('✅ 스크립트 로드 완료');
+            initUniver();
+        }
+
+        function initUniver() {
+            try {
+                setStatus('🎯 Univer 생성 중...');
+
+                let univer = null;
+
+                // 0.2.17 버전 API 시도
+                if (window.UniverCore && window.UniverCore.Univer) {
+                    console.log('🔧 시도: new UniverCore.Univer');
+                    univer = new window.UniverCore.Univer({
+                        locale: 'en-US',
+                        theme: 'default'
+                    });
+                    console.log('✅ 성공: UniverCore.Univer');
+                }
+                else if (window.UniverCore && window.UniverCore.createUniver) {
+                    console.log('🔧 시도: UniverCore.createUniver');
+                    univer = window.UniverCore.createUniver({
+                        locale: 'en-US',
+                        theme: 'default'
+                    });
+                    console.log('✅ 성공: UniverCore.createUniver');
+                }
+                else {
+                    throw new Error('Univer 생성자를 찾을 수 없음');
+                }
+
+                console.log('✅ Univer 인스턴스 생성:', univer);
+
+                const container = document.getElementById('app');
+                if (!container) {
+                    throw new Error('컨테이너 없음');
+                }
+
+                setStatus('🔧 UI 플러그인 등록...');
+
+                // UI 플러그인 등록
+                univer.registerPlugin(window.UniverUi.UniverUIPlugin, {
+                    container: container
+                });
+
+                setStatus('📊 Sheets 플러그인 등록...');
+
+                // Sheets 플러그인 등록
+                univer.registerPlugin(window.UniverSheets.UniverSheetsPlugin);
+                univer.registerPlugin(window.UniverSheetsUi.UniverSheetsUIPlugin);
+
+                console.log('✅ 플러그인 등록 완료');
+
+                setStatus('📋 워크북 생성...');
+
+                // 워크북 생성
+                const workbookData = {
+                    id: 'msm-workbook',
+                    locale: 'en-US',
+                    name: 'MSM Workbook',
+                    sheetOrder: ['sheet1'],
+                    sheets: {
+                        'sheet1': {
+                            id: 'sheet1',
+                            name: 'MSM 견적서',
+                            cellData: {
+                                0: {
+                                    0: { v: '품목코드' },
+                                    1: { v: '품목명' },
+                                    2: { v: '수량' },
+                                    3: { v: '단가' },
+                                    4: { v: '금액' }
+                                },
+                                1: {
+                                    0: { v: 'A001' },
+                                    1: { v: '의료기기 A' },
+                                    2: { v: 10 },
+                                    3: { v: 50000 },
+                                    4: { v: 500000 }
+                                },
+                                2: {
+                                    0: { v: 'B002' },
+                                    1: { v: '의료기기 B' },
+                                    2: { v: 5 },
+                                    3: { v: 80000 },
+                                    4: { v: 400000 }
+                                },
+                                3: {
+                                    0: { v: 'C003' },
+                                    1: { v: '의료기기 C' },
+                                    2: { v: 8 },
+                                    3: { v: 30000 },
+                                    4: { v: 240000 }
+                                }
+                            },
+                            rowCount: 100,
+                            columnCount: 20
+                        }
+                    }
+                };
+
+                // UniverInstanceType 찾기
+                let instanceType = null;
+                if (window.UniverCore.UniverInstanceType) {
+                    instanceType = window.UniverCore.UniverInstanceType.UNIVER_SHEET;
+                } else {
+                    instanceType = 2; // fallback
+                }
+
+                univer.createUnit(instanceType, workbookData);
+
+                console.log('✅ 워크북 생성 완료');
+                setStatus('✅ MSM Excel 뷰어 준비 완료!');
+
+                // UI 확인
+                setTimeout(() => {
+                    const containerChildren = container.children.length;
+                    console.log('🔍 UI 상태:', containerChildren, '개 요소');
+
+                    if (containerChildren > 0) {
+                        setStatus('🎉 MSM Excel 뷰어 정상 작동!');
+                        window.postMessage('univer_ready', '*');
+                    } else {
+                        setStatus('⚠️ UI 렌더링 확인 중...');
+                    }
+                }, 2000);
+
+            } catch (error) {
+                console.error('❌ 초기화 실패:', error);
+                setStatus('❌ 실패: ' + error.message);
+            }
+        }
+
+        // 초기화 시작 - 더 긴 대기 시간
+        setTimeout(waitForScripts, 2000);
+    </script>
+</body>
+</html>

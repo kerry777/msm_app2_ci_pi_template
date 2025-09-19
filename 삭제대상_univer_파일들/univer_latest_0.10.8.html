@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer 0.10.8 최신 버전</title>
+
+    <!-- 최신 버전 0.10.8 -->
+    <script src="https://unpkg.com/@univerjs/presets@0.10.8/lib/umd/preset-sheets-en-US.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/presets@0.10.8/lib/styles/preset-sheets-en-US.css">
+
+    <style>
+        * { margin: 0; padding: 0; }
+        body { height: 100vh; overflow: hidden; font-family: Arial, sans-serif; }
+        #app { height: 100vh; width: 100vw; }
+        #console {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            overflow-y: auto;
+            border-top: 2px solid #0f0;
+            z-index: 999999;
+        }
+        #console.minimized { height: 30px; }
+        .toggle-btn {
+            position: absolute;
+            right: 10px;
+            top: 5px;
+            cursor: pointer;
+            color: yellow;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <div id="console">
+        <span class="toggle-btn" onclick="toggleConsole()">📊</span>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const logEl = document.getElementById('log');
+        let logCount = 0;
+
+        function log(msg, obj = null) {
+            const time = new Date().toLocaleTimeString();
+            const line = `[${++logCount}] ${time} | ${msg}`;
+            const div = document.createElement('div');
+            div.textContent = line;
+            logEl.appendChild(div);
+
+            console.log(msg, obj || '');
+
+            if (obj) {
+                const detail = document.createElement('div');
+                detail.style.marginLeft = '20px';
+                detail.style.color = '#888';
+                detail.textContent = JSON.stringify(obj, null, 2).substring(0, 200);
+                logEl.appendChild(detail);
+            }
+
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function toggleConsole() {
+            document.getElementById('console').classList.toggle('minimized');
+        }
+
+        async function init() {
+            log('Starting Univer 0.10.8 initialization...');
+
+            // 완전 로드 대기
+            await new Promise(r => {
+                if (document.readyState === 'complete') {
+                    setTimeout(r, 1000);
+                } else {
+                    window.addEventListener('load', () => setTimeout(r, 1000));
+                }
+            });
+
+            log('Page fully loaded, checking globals...');
+
+            // 전역 확인
+            const globals = Object.keys(window).filter(k =>
+                k.includes('Univer') ||
+                k.includes('univer')
+            );
+
+            log('Found globals:', globals);
+
+            try {
+                // 가능한 모든 이름 시도
+                const possibleNames = [
+                    'UniverSheetsPresetEnUS',
+                    'UniverPresetSheetsEnUS',
+                    'UniverPreset',
+                    'UniverPresets',
+                    'univerPreset',
+                    'univerPresets',
+                    'Univer'
+                ];
+
+                let preset = null;
+                let foundName = null;
+
+                for (const name of possibleNames) {
+                    if (window[name]) {
+                        preset = window[name];
+                        foundName = name;
+                        break;
+                    }
+                }
+
+                if (preset) {
+                    log(`Found preset: ${foundName}`, { type: typeof preset });
+
+                    // 함수인지 객체인지 확인
+                    if (typeof preset === 'function') {
+                        log('Preset is a function, calling it...');
+
+                        const result = preset({
+                            container: 'app'
+                        });
+
+                        log('Function called successfully', result ? { hasUniversAPI: !!result.univerAPI } : null);
+
+                        if (result && result.univerAPI) {
+                            // API 사용
+                            const { univerAPI } = result;
+                            log('Got univerAPI, creating workbook...');
+
+                            // 워크북 생성
+                            const workbook = univerAPI.createWorkbook({
+                                name: 'MSM 견적서',
+                                sheets: [{
+                                    name: '견적서',
+                                    rowCount: 100,
+                                    columnCount: 20
+                                }]
+                            });
+
+                            log('Workbook created');
+
+                            // 데이터 입력
+                            const sheet = workbook.getActiveSheet();
+                            if (sheet) {
+                                // 헤더
+                                sheet.getRange(0, 0, 1, 7).setValues([
+                                    ['품목코드', '품목명', '규격', '수량', '단가', '금액', '비고']
+                                ]);
+
+                                // 데이터
+                                sheet.getRange(1, 0, 5, 7).setValues([
+                                    ['MD-001', '수술용 메스', '일회용', 100, 5000, 500000, '긴급'],
+                                    ['MD-002', '의료용 거즈', '10x10cm', 500, 1000, 500000, ''],
+                                    ['MD-003', '주사기', '5ml', 200, 3000, 600000, ''],
+                                    ['MD-004', '수액세트', '표준형', 150, 8000, 1200000, '재고확인'],
+                                    ['MD-005', '진단키트', 'COVID-19', 50, 15000, 750000, '예약주문']
+                                ]);
+
+                                log('✅ Data loaded successfully!');
+                            }
+
+                            window.univerAPI = univerAPI;
+                        }
+
+                    } else if (typeof preset === 'object') {
+                        log('Preset is an object', { keys: Object.keys(preset).slice(0, 10) });
+
+                        // 객체에서 초기화 함수 찾기
+                        const initFunc = preset.create || preset.init || preset.createUniver;
+                        if (initFunc) {
+                            log('Found init function in object');
+                            const result = initFunc({ container: 'app' });
+                            log('Init function called', result);
+                        }
+                    }
+
+                } else {
+                    log('❌ No preset found!');
+                    log('Script may not be loaded. Check Network tab.');
+                }
+
+                // DOM 체크
+                setTimeout(() => {
+                    const app = document.getElementById('app');
+                    const check = {
+                        children: app.children.length,
+                        canvas: app.querySelectorAll('canvas').length,
+                        univer: app.querySelectorAll('[class*="univer"]').length,
+                        visible: app.offsetHeight > 0
+                    };
+
+                    log('DOM Check:', check);
+
+                    if (check.children > 0) {
+                        log('✅✅✅ RENDERING SUCCESS! ✅✅✅');
+                    } else {
+                        log('⚠️⚠️⚠️ NO RENDERING DETECTED ⚠️⚠️⚠️');
+                    }
+                }, 3000);
+
+            } catch (error) {
+                log('❌ ERROR:', { message: error.message, stack: error.stack });
+            }
+        }
+
+        // 시작
+        init();
+    </script>
+</body>
+</html>

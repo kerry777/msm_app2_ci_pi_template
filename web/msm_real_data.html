@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MSM Excel System with Real Templates</title>
+
+  <!-- React / deps -->
+  <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/rxjs@7.8.1/dist/bundles/rxjs.umd.min.js"></script>
+
+  <!-- Univer Preset UMD -->
+  <script src="https://unpkg.com/@univerjs/presets@0.10.8/lib/umd/index.js"></script>
+  <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.10.8/lib/umd/index.js"></script>
+  <script src="https://unpkg.com/@univerjs/preset-sheets-core@0.10.8/lib/umd/locales/en-US.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core@0.10.8/lib/index.css"/>
+
+  <!-- SheetJS for Excel import/export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
+
+  <style>
+    html, body { height: 100%; margin: 0; font-family: system-ui; }
+
+    /* MSM Header */
+    .msm-header {
+      background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .msm-title { font-size: 20px; font-weight: 700; }
+
+    /* Excel 메뉴바 */
+    .excel-menubar {
+      display: flex;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+      font-size: 14px;
+      padding: 0 10px;
+    }
+    .menu-item {
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    .menu-item:hover { background: #e9ecef; }
+
+    /* Main Layout */
+    .main-container {
+      display: flex;
+      height: calc(100vh - 105px);
+    }
+
+    /* Excel Area */
+    .excel-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Toolbar */
+    #toolbar {
+      display: flex;
+      align-items: center;
+      padding: 6px 8px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-bottom: 1px solid #dee2e6;
+      gap: 4px;
+      flex-wrap: wrap;
+      min-height: 44px;
+    }
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border-right: 1px solid rgba(255,255,255,0.3);
+      padding-right: 8px;
+      margin-right: 8px;
+    }
+    .toolbar-group:last-child { border-right: none; margin-right: 0; }
+    .btn {
+      padding: 6px 10px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1);
+      color: white;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 12px;
+      transition: all 0.3s ease;
+      min-width: 35px;
+      text-align: center;
+    }
+    .btn:hover {
+      background: rgba(255,255,255,0.2);
+      transform: translateY(-1px);
+    }
+
+    /* Spreadsheet */
+    #univer {
+      flex: 1;
+      background: white;
+    }
+
+    /* Template Sidebar */
+    .template-sidebar {
+      width: 220px;
+      background: #f8f9fa;
+      border-left: 1px solid #dee2e6;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .template-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .template-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 90px;
+      margin-bottom: 15px;
+      border: 2px solid #dee2e6;
+      border-radius: 10px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: #495057;
+    }
+    .template-btn:hover {
+      border-color: #007bff;
+      background: #f8f9ff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,123,255,0.2);
+    }
+    .template-icon { font-size: 28px; margin-bottom: 8px; }
+    .template-name { font-size: 14px; font-weight: 600; }
+    .template-desc { font-size: 11px; color: #6c757d; text-align: center; margin-top: 3px; }
+
+    /* Status Bar */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8f9fa;
+      padding: 8px 15px;
+      border-top: 1px solid #dee2e6;
+      font-size: 13px;
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <!-- MSM Header -->
+  <div class="msm-header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span>📊</span>
+      <span class="msm-title">MSM Excel System</span>
+    </div>
+    <div style="font-size: 14px; opacity: 0.9;">
+      Template Edition v3.0
+    </div>
+  </div>
+
+  <!-- Excel 메뉴바 -->
+  <div class="excel-menubar">
+    <div class="menu-item" onclick="showMenu('file')">File</div>
+    <div class="menu-item" onclick="showMenu('edit')">Edit</div>
+    <div class="menu-item" onclick="showMenu('view')">View</div>
+    <div class="menu-item" onclick="showMenu('insert')">Insert</div>
+    <div class="menu-item" onclick="showMenu('format')">Format</div>
+    <div class="menu-item" onclick="showMenu('data')">Data</div>
+    <div class="menu-item" onclick="showMenu('tools')">Tools</div>
+    <div class="menu-item" onclick="showMenu('help')">Help</div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="main-container">
+    <!-- Excel Area -->
+    <div class="excel-area">
+      <!-- Toolbar -->
+      <div id="toolbar">
+        <!-- 파일 작업 -->
+        <div class="toolbar-group">
+          <button class="btn" onclick="createNew()" title="새 워크북">📄</button>
+          <button class="btn" onclick="document.getElementById('fileInput').click()" title="파일 열기">📁</button>
+          <button class="btn" onclick="saveExcel()" title="저장">💾</button>
+        </div>
+
+        <!-- 편집 작업 -->
+        <div class="toolbar-group">
+          <button class="btn" onclick="undoAction()" title="실행 취소">↶</button>
+          <button class="btn" onclick="redoAction()" title="다시 실행">↷</button>
+        </div>
+
+        <!-- 클립보드 -->
+        <div class="toolbar-group">
+          <button class="btn" onclick="cutSelection()" title="잘라내기">✂️</button>
+          <button class="btn" onclick="copySelection()" title="복사">📋</button>
+          <button class="btn" onclick="pasteSelection()" title="붙여넣기">📌</button>
+        </div>
+
+        <!-- 서식 -->
+        <div class="toolbar-group">
+          <button class="btn" onclick="applyBold()" title="굵게"><b>B</b></button>
+          <button class="btn" onclick="applyItalic()" title="기울임"><i>I</i></button>
+          <button class="btn" onclick="applyUnderline()" title="밑줄"><u>U</u></button>
+        </div>
+
+        <!-- 고급 기능 -->
+        <div class="toolbar-group">
+          <button class="btn" onclick="insertChart()" title="차트 삽입">📊</button>
+          <button class="btn" onclick="insertFunction()" title="함수 삽입">ƒ</button>
+          <button class="btn" onclick="clearSheet()" title="시트 클리어">🗑️</button>
+        </div>
+      </div>
+
+      <!-- Spreadsheet -->
+      <div id="univer"></div>
+
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span id="status">시스템 준비 중...</span>
+        <span id="info">Ready</span>
+      </div>
+    </div>
+
+    <!-- Template Sidebar -->
+    <div class="template-sidebar">
+      <div class="template-title">📋 Excel 템플릿</div>
+
+      <button class="template-btn" onclick="loadExcelTemplate('quotation_kr')">
+        <div class="template-icon">🇰🇷</div>
+        <div class="template-name">견적서 (국내)</div>
+        <div class="template-desc">국내영업용 견적서 양식</div>
+      </button>
+
+      <button class="template-btn" onclick="loadExcelTemplate('commercial_invoice')">
+        <div class="template-icon">🌍</div>
+        <div class="template-name">Commercial Invoice</div>
+        <div class="template-desc">수출용 상업송장</div>
+      </button>
+
+      <button class="template-btn" onclick="loadExcelTemplate('proforma_invoice')">
+        <div class="template-icon">📊</div>
+        <div class="template-name">Proforma Invoice</div>
+        <div class="template-desc">해외영업용 견적서</div>
+      </button>
+
+      <button class="template-btn" onclick="loadExcelTemplate('packing_list')">
+        <div class="template-icon">📦</div>
+        <div class="template-name">Packing List</div>
+        <div class="template-desc">포장 명세서</div>
+      </button>
+
+      <button class="template-btn" onclick="loadExcelTemplate('quotation_as')">
+        <div class="template-icon">🔧</div>
+        <div class="template-name">견적서 (AS)</div>
+        <div class="template-desc">서비스팀 견적서</div>
+      </button>
+
+      <div style="margin-top: 20px; padding: 10px; background: #e9ecef; border-radius: 5px; font-size: 11px; color: #6c757d;">
+        💡 템플릿을 클릭하면 실제 Excel 파일을 불러옵니다. 파일이 없으면 기본 템플릿을 사용합니다.
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden File Input -->
+  <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;" onchange="handleFileSelect(event)">
+
+  <script>
+    // Global variables
+    let univerAPI = null;
+    let workbook = null;
+
+    const setStatus = (msg) => document.getElementById('status').textContent = msg;
+    const setInfo = (msg) => document.getElementById('info').textContent = msg;
+
+    // Initialize Univer
+    async function initUniver() {
+      try {
+        setStatus('🌐 Univer 초기화 중...');
+
+        // Wait for libraries
+        let attempts = 0;
+        while (attempts < 50 && (!window.UniverPresets || !window.UniverPresetSheetsCore)) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+
+        if (!window.UniverPresets || !window.UniverPresetSheetsCore) {
+          throw new Error('Univer 라이브러리 로드 실패');
+        }
+
+        const { createUniver } = UniverPresets;
+        const { LocaleType, mergeLocales } = UniverCore;
+        const { UniverSheetsCorePreset } = UniverPresetSheetsCore;
+
+        const { univerAPI: api } = createUniver({
+          locale: LocaleType.EN_US,
+          locales: { [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS) },
+          presets: [UniverSheetsCorePreset({ container: 'univer' })],
+        });
+
+        univerAPI = api;
+        workbook = univerAPI.createWorkbook({ name: 'MSM 워크북' });
+        setStatus('✅ 시스템 준비 완료');
+        setInfo('템플릿을 선택하세요');
+
+        console.log('✅ MSM Excel System 초기화 완료');
+      } catch (error) {
+        console.error('💥 초기화 실패:', error);
+        setStatus('💥 초기화 실패: ' + error.message);
+      }
+    }
+
+    // Load Excel Template (Real Excel Files)
+    async function loadExcelTemplate(templateType) {
+      setStatus(`📋 ${templateType} 템플릿 로딩 중...`);
+
+      // Template file paths (실제 MSM 템플릿 파일들)
+      const templatePaths = {
+        'quotation_kr': '../../../msm_app1/client/assets/MEK_SALES_TEMPLATE_QT_KR.xlsx',
+        'commercial_invoice': '../../../msm_app1/client/assets/MEK_SALES_TEMPLATE_CI.xlsx',
+        'proforma_invoice': '../../../msm_app1/client/assets/MEK_SALES_TEMPLATE_PI.xlsx',
+        'packing_list': '../../../msm_app1/client/assets/MEK_SALES_TEMPLATE_PL.xlsx',
+        'quotation_as': '../../../msm_app1/client/assets/MEK_SALES_TEMPLATE_QT_AS.xlsx'
+      };
+
+      const filePath = templatePaths[templateType];
+      if (!filePath) {
+        setStatus(`❌ ${templateType} 템플릿 파일 경로가 없습니다`);
+        return;
+      }
+
+      try {
+        // Try to load real Excel file
+        setStatus(`📥 ${filePath} 파일 로딩 중...`);
+        const response = await fetch(filePath);
+
+        if (!response.ok) {
+          console.warn(`Excel 파일 ${filePath}를 찾을 수 없습니다. 기본 템플릿을 사용합니다.`);
+          loadDefaultTemplate(templateType);
+          return;
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = XLSX.read(new Uint8Array(arrayBuffer), {
+          type: 'array',
+          cellDates: true,
+          cellStyles: true
+        });
+
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+          header: 1,
+          raw: true,
+          defval: null
+        });
+
+        if (univerAPI && jsonData.length > 0) {
+          const rows = jsonData.length;
+          const cols = Math.max(0, ...jsonData.map(row => row ? row.length : 0));
+
+          // Prepare data for Univer
+          const values = Array.from({ length: rows }, (_, r) => {
+            const row = jsonData[r] || [];
+            return Array.from({ length: cols }, (_, c) => {
+              const cellValue = row[c];
+              return cellValue === undefined ? null : cellValue;
+            });
+          });
+
+          // Load into Univer
+          const activeWorkbook = univerAPI.getActiveWorkbook();
+          const activeSheet = activeWorkbook.getActiveSheet();
+
+          // Clear existing content
+          try {
+            activeSheet.clear();
+          } catch (e) {
+            console.warn('Clear 실패, 무시하고 계속:', e);
+          }
+
+          // Set new data
+          const range = activeSheet.getRange(0, 0, rows, cols);
+          range.setValues(values);
+
+          setStatus(`✅ ${templateType} Excel 템플릿 로드 완료`);
+          setInfo(`${rows}행 × ${cols}열 데이터 로드됨`);
+
+          console.log(`Excel 템플릿 로드 성공: ${templateType}, ${rows}x${cols}`);
+        }
+
+      } catch (error) {
+        console.error('Excel 템플릿 로드 실패:', error);
+        setStatus(`❌ Excel 로드 실패: ${error.message}`);
+
+        // Fallback to default template
+        console.log('기본 템플릿으로 폴백합니다.');
+        loadDefaultTemplate(templateType);
+      }
+    }
+
+    // Default template fallback
+    function loadDefaultTemplate(templateType) {
+      const templates = {
+        'quotation_kr': [
+          ['MSM 견적서', '', '', '', ''],
+          ['', '', '', '', ''],
+          ['번호', '품목명', '수량', '단가', '금액'],
+          ['1', '의료기기 A', '10', '50000', '=C4*D4'],
+          ['2', '의료기기 B', '5', '80000', '=C5*D5'],
+          ['3', '의료기기 C', '20', '30000', '=C6*D6'],
+          ['', '', '', '총계:', '=SUM(E4:E6)']
+        ],
+        'commercial_invoice': [
+          ['COMMERCIAL INVOICE', '', '', '', ''],
+          ['', '', '', '', ''],
+          ['Item', 'Description', 'Qty', 'Unit Price', 'Amount'],
+          ['1', 'Medical Device A', '10', '500', '=C4*D4'],
+          ['2', 'Medical Device B', '5', '800', '=C5*D5'],
+          ['3', 'Medical Device C', '20', '300', '=C6*D6'],
+          ['', '', '', 'Total:', '=SUM(E4:E6)']
+        ],
+        'proforma_invoice': [
+          ['PROFORMA INVOICE', '', '', '', ''],
+          ['', '', '', '', ''],
+          ['Item', 'Description', 'Qty', 'Unit Price', 'Amount'],
+          ['1', '', '', '', ''],
+          ['2', '', '', '', ''],
+          ['3', '', '', '', '']
+        ],
+        'packing_list': [
+          ['PACKING LIST', '', '', '', ''],
+          ['', '', '', '', ''],
+          ['Package No.', 'Description', 'Qty', 'Weight', 'Volume'],
+          ['1', '', '', '', ''],
+          ['2', '', '', '', ''],
+          ['3', '', '', '', '']
+        ],
+        'quotation_as': [
+          ['서비스 견적서', '', '', '', ''],
+          ['', '', '', '', ''],
+          ['번호', '서비스 항목', '수량', '단가', '금액'],
+          ['1', '', '', '', ''],
+          ['2', '', '', '', ''],
+          ['3', '', '', '', '']
+        ]
+      };
+
+      const templateData = templates[templateType];
+      if (!templateData) {
+        setStatus(`❌ ${templateType} 기본 템플릿이 없습니다`);
+        return;
+      }
+
+      try {
+        const activeWorkbook = univerAPI.getActiveWorkbook();
+        const activeSheet = activeWorkbook.getActiveSheet();
+
+        try {
+          activeSheet.clear();
+        } catch (e) {
+          console.warn('Clear 실패, 무시하고 계속:', e);
+        }
+
+        const range = activeSheet.getRange(0, 0, templateData.length, 5);
+        range.setValues(templateData);
+
+        setStatus(`✅ ${templateType} 기본 템플릿 로드 완료`);
+        setInfo(`${templateData.length}행 기본 템플릿`);
+
+      } catch (error) {
+        setStatus(`❌ 기본 템플릿 로드 실패: ${error.message}`);
+        console.error('기본 템플릿 로드 실패:', error);
+      }
+    }
+
+    // File operations
+    async function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      try {
+        setStatus('📥 파일 로딩 중...');
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: true });
+
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: true });
+
+        if (univerAPI && jsonData.length > 0) {
+          const rows = jsonData.length;
+          const cols = Math.max(0, ...jsonData.map(r => r ? r.length : 0));
+          const values = Array.from({ length: rows }, (_, r) => {
+            const row = jsonData[r] || [];
+            return Array.from({ length: cols }, (_, c) => row[c] === undefined ? null : row[c]);
+          });
+
+          const activeWorkbook = univerAPI.getActiveWorkbook();
+          const activeSheet = activeWorkbook.getActiveSheet();
+          activeSheet.clear();
+          activeSheet.getRange(0, 0, rows, cols).setValues(values);
+
+          setStatus('✅ 파일 로드 완료: ' + file.name);
+        }
+      } catch (error) {
+        setStatus('❌ 파일 로드 실패: ' + error.message);
+      }
+    }
+
+    function saveExcel() {
+      if (!univerAPI) return;
+      try {
+        setStatus('💾 Excel 저장 중...');
+        const activeWorkbook = univerAPI.getActiveWorkbook();
+        const activeSheet = activeWorkbook.getActiveSheet();
+        const range = activeSheet.getRange(0, 0, 100, 20);
+        const values = range.getValues();
+
+        const worksheet = XLSX.utils.aoa_to_sheet(values);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+
+        const arrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([arrayBuffer], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `MSM_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        setStatus('✅ Excel 저장 완료');
+      } catch (error) {
+        setStatus('❌ 저장 실패: ' + error.message);
+      }
+    }
+
+    function createNew() {
+      if (univerAPI) {
+        const activeWorkbook = univerAPI.getActiveWorkbook();
+        const activeSheet = activeWorkbook.getActiveSheet();
+        activeSheet.clear();
+        setStatus('🆕 새 문서 생성 완료');
+        setInfo('빈 시트');
+      }
+    }
+
+    function clearSheet() {
+      if (univerAPI) {
+        const activeWorkbook = univerAPI.getActiveWorkbook();
+        const activeSheet = activeWorkbook.getActiveSheet();
+        activeSheet.clear();
+        setStatus('🗑️ 시트 클리어 완료');
+        setInfo('빈 시트');
+      }
+    }
+
+    // Menu functions
+    function showMenu(menuType) {
+      setStatus(`${menuType.toUpperCase()} 메뉴 선택됨`);
+    }
+
+    // Toolbar functions
+    function undoAction() { setStatus('↶ 실행 취소'); }
+    function redoAction() { setStatus('↷ 다시 실행'); }
+    function cutSelection() { setStatus('✂️ 잘라내기'); }
+    function copySelection() { setStatus('📋 복사'); }
+    function pasteSelection() { setStatus('📌 붙여넣기'); }
+    function applyBold() { setStatus('Bold 서식 적용'); }
+    function applyItalic() { setStatus('Italic 서식 적용'); }
+    function applyUnderline() { setStatus('Underline 서식 적용'); }
+    function insertChart() { setStatus('📊 차트 삽입'); }
+    function insertFunction() { setStatus('ƒ 함수 삽입'); }
+
+    // Initialize on load
+    window.addEventListener('load', initUniver);
+  </script>
+</body>
+</html>

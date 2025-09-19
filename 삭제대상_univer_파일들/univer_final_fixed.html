@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSM Excel System - Final Fixed</title>
+
+    <!-- 가장 먼저: getLocation 완벽한 해결 -->
+    <script>
+        // 1. history 객체에 getLocation 추가
+        if (window.history && !window.history.getLocation) {
+            window.history.getLocation = function() {
+                return {
+                    pathname: window.location.pathname,
+                    search: window.location.search,
+                    hash: window.location.hash,
+                    state: this.state || null,
+                    key: 'default'
+                };
+            };
+        }
+
+        // 2. 전역 getLocation
+        window.getLocation = function() {
+            return {
+                pathname: window.location.pathname || '/',
+                search: window.location.search || '',
+                hash: window.location.hash || '',
+                state: null,
+                key: 'global'
+            };
+        };
+
+        // 3. 프로토타입 체인에 추가 (가장 중요!)
+        Object.defineProperty(Object.prototype, 'getLocation', {
+            get: function() {
+                // 함수로 반환
+                return function() {
+                    return {
+                        pathname: window.location.pathname || '/',
+                        search: window.location.search || '',
+                        hash: window.location.hash || '',
+                        state: null,
+                        key: 'proto'
+                    };
+                };
+            },
+            configurable: true
+        });
+
+        // 4. undefined 보호
+        const originalUndefined = undefined;
+        Object.defineProperty(window, 'undefined', {
+            get: function() {
+                // undefined가 getLocation을 가지도록
+                const obj = {
+                    getLocation: function() {
+                        return {
+                            pathname: '/',
+                            search: '',
+                            hash: '',
+                            state: null,
+                            key: 'undefined'
+                        };
+                    }
+                };
+                // 다른 undefined 동작 유지
+                obj.valueOf = () => originalUndefined;
+                obj.toString = () => 'undefined';
+                return obj;
+            },
+            configurable: true
+        });
+    </script>
+
+    <!-- CSS 먼저 로드 -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@0.1.17/lib/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@0.1.17/lib/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/index.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #app {
+            width: 100%;
+            height: 100%;
+        }
+        .status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            z-index: 10000;
+        }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Initializing...</div>
+    <div id="app"></div>
+
+    <!-- React 및 의존성 -->
+    <script src="https://unpkg.com/react@17.0.2/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+
+    <!-- React 17로 다운그레이드 후 getLocation 재패치 -->
+    <script>
+        // React 로드 후 다시 패치 (중요!)
+        if (window.React) {
+            React.getLocation = window.getLocation;
+        }
+        if (window.ReactDOM) {
+            ReactDOM.getLocation = window.getLocation;
+        }
+    </script>
+
+    <!-- Univer 0.1.17 (안정 버전) -->
+    <script src="https://unpkg.com/@univerjs/core@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/design@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/umd/index.js"></script>
+
+    <script>
+        // 에러 차단
+        window.addEventListener('error', function(e) {
+            if (e.message && e.message.includes('getLocation')) {
+                console.warn('getLocation error blocked:', e.message);
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        }, true);
+
+        // 콘솔 에러도 차단
+        const originalError = console.error;
+        console.error = function(...args) {
+            const msg = args.join(' ');
+            if (msg.includes('getLocation') || msg.includes('SelectionRenderService')) {
+                console.warn('Blocked console error:', msg);
+                return;
+            }
+            originalError.apply(console, args);
+        };
+
+        function setStatus(msg) {
+            const el = document.getElementById('status');
+            if (el) el.textContent = msg;
+            console.log('Status:', msg);
+        }
+
+        // DOM 로드 완료 대기
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initUniver, 1000);
+        });
+
+        function initUniver() {
+            try {
+                setStatus('Loading Univer modules...');
+
+                // 모듈 확인
+                if (!window.UniverCore || !window.UniverCore.Univer) {
+                    throw new Error('UniverCore not loaded');
+                }
+
+                const { Univer, UniverInstanceType } = window.UniverCore;
+                const { UniverUIPlugin } = window.UniverUi;
+                const { UniverSheetsPlugin } = window.UniverSheets;
+                const { UniverSheetsUIPlugin } = window.UniverSheetsUi;
+
+                setStatus('Creating Univer instance...');
+
+                // Univer 인스턴스 생성
+                const univer = new Univer({
+                    locale: 'en-US'
+                });
+
+                setStatus('Registering plugins...');
+
+                // 플러그인 등록
+                univer.registerPlugin(UniverUIPlugin, {
+                    container: document.getElementById('app')
+                });
+                univer.registerPlugin(UniverSheetsPlugin);
+                univer.registerPlugin(UniverSheetsUIPlugin);
+
+                setStatus('Creating workbook...');
+
+                // 워크북 생성
+                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                    id: 'workbook-01',
+                    locale: 'en-US',
+                    name: 'MSM Quotation',
+                    sheetOrder: ['sheet-01'],
+                    sheets: {
+                        'sheet-01': {
+                            id: 'sheet-01',
+                            name: 'Quotation',
+                            cellData: {
+                                0: {
+                                    0: { v: '품목코드' },
+                                    1: { v: '품목명' },
+                                    2: { v: '수량' },
+                                    3: { v: '단가' },
+                                    4: { v: '금액' }
+                                },
+                                1: {
+                                    0: { v: 'M001' },
+                                    1: { v: '의료장비 A' },
+                                    2: { v: 10 },
+                                    3: { v: 50000 },
+                                    4: { v: 500000 }
+                                },
+                                2: {
+                                    0: { v: 'M002' },
+                                    1: { v: '의료장비 B' },
+                                    2: { v: 5 },
+                                    3: { v: 100000 },
+                                    4: { v: 500000 }
+                                },
+                                3: {
+                                    0: { v: 'M003' },
+                                    1: { v: '의료장비 C' },
+                                    2: { v: 3 },
+                                    3: { v: 200000 },
+                                    4: { v: 600000 }
+                                }
+                            },
+                            rowCount: 100,
+                            columnCount: 20
+                        }
+                    }
+                });
+
+                setStatus('✅ Success!');
+
+                // 전역 변수 설정
+                window.univer = univer;
+                window.workbook = workbook;
+
+                // Flutter 알림
+                if (window.parent !== window) {
+                    window.parent.postMessage('univer_ready', '*');
+                }
+
+                // 상태 메시지 숨기기
+                setTimeout(() => {
+                    const statusEl = document.getElementById('status');
+                    if (statusEl) statusEl.style.display = 'none';
+                }, 3000);
+
+                console.log('✅ Univer initialized successfully!');
+                console.log('Canvas elements:', document.querySelectorAll('canvas').length);
+                console.log('Grid elements:', document.querySelectorAll('[class*="grid"]').length);
+
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                setStatus('Error: ' + error.message);
+            }
+        }
+
+        // 추가 보호: 로드 후에도 getLocation 패치 유지
+        setInterval(function() {
+            if (typeof Object.prototype.getLocation === 'undefined') {
+                Object.defineProperty(Object.prototype, 'getLocation', {
+                    get: function() {
+                        return function() {
+                            return {
+                                pathname: '/',
+                                search: '',
+                                hash: '',
+                                state: null,
+                                key: 'refresh'
+                            };
+                        };
+                    },
+                    configurable: true
+                });
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

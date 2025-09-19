@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSM Excel Viewer - Working Version</title>
+
+    <!-- 1단계: getLocation 완전 해결 -->
+    <script>
+        // React가 로드되기 전에 전역 패치
+        window.getLocation = () => ({ pathname: '/', search: '', hash: '', state: null });
+
+        // 모든 객체에 getLocation 추가
+        if (typeof Object.prototype.getLocation === 'undefined') {
+            Object.defineProperty(Object.prototype, 'getLocation', {
+                value: function() {
+                    return { pathname: '/', search: '', hash: '', state: null };
+                },
+                writable: true,
+                configurable: true
+            });
+        }
+    </script>
+
+    <!-- 2단계: Univer 0.1.17 버전 사용 (검증된 버전) -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@0.1.17/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@0.1.17/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/index.css">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        #app {
+            width: 100vw;
+            height: 100vh;
+        }
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="loading">Loading Excel Viewer...</div>
+    </div>
+
+    <!-- 3단계: 필수 라이브러리 로드 -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/rxjs@7.8.1/dist/bundles/rxjs.umd.min.js"></script>
+
+    <!-- 4단계: Univer 0.1.17 로드 -->
+    <script src="https://unpkg.com/@univerjs/core@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/design@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/umd/index.js"></script>
+
+    <script>
+        // 5단계: 에러 핸들링
+        window.addEventListener('error', function(e) {
+            if (e.message && e.message.includes('getLocation')) {
+                e.preventDefault();
+                console.warn('getLocation error prevented');
+                return false;
+            }
+        }, true);
+
+        // 6단계: Univer 초기화
+        window.addEventListener('DOMContentLoaded', async function() {
+            // 스크립트 로드 확인
+            await new Promise(resolve => {
+                const checkInterval = setInterval(() => {
+                    if (window.UniverCore && window.UniverSheets) {
+                        clearInterval(checkInterval);
+                        resolve();
+                    }
+                }, 100);
+            });
+
+            try {
+                console.log('Initializing Univer...');
+
+                // Univer 인스턴스 생성
+                const { Univer, UniverInstanceType } = window.UniverCore;
+                const { UniverUIPlugin } = window.UniverUi;
+                const { UniverSheetsPlugin } = window.UniverSheets;
+                const { UniverSheetsUIPlugin } = window.UniverSheetsUi;
+
+                const univer = new Univer({
+                    theme: {
+                        colorScheme: 'light'
+                    }
+                });
+
+                // 필수 플러그인 등록
+                univer.registerPlugin(UniverUIPlugin, {
+                    container: document.getElementById('app')
+                });
+
+                univer.registerPlugin(UniverSheetsPlugin);
+                univer.registerPlugin(UniverSheetsUIPlugin);
+
+                // 워크북 생성
+                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                    id: 'workbook-01',
+                    name: 'MSM 견적서',
+                    sheets: [
+                        {
+                            id: 'sheet-01',
+                            name: '견적서',
+                            rowCount: 100,
+                            columnCount: 20,
+                            cellData: {
+                                0: {
+                                    0: { v: '품목코드' },
+                                    1: { v: '품목명' },
+                                    2: { v: '수량' },
+                                    3: { v: '단가' },
+                                    4: { v: '금액' }
+                                },
+                                1: {
+                                    0: { v: 'A001' },
+                                    1: { v: '의료기기 A' },
+                                    2: { v: 10 },
+                                    3: { v: 50000 },
+                                    4: { v: 500000 }
+                                },
+                                2: {
+                                    0: { v: 'A002' },
+                                    1: { v: '의료기기 B' },
+                                    2: { v: 5 },
+                                    3: { v: 75000 },
+                                    4: { v: 375000 }
+                                }
+                            }
+                        }
+                    ]
+                });
+
+                // 로딩 메시지 제거
+                document.querySelector('.loading').style.display = 'none';
+
+                console.log('✅ Univer initialized successfully');
+
+                // Flutter 통신
+                if (window.parent !== window) {
+                    window.parent.postMessage('univer_ready', '*');
+                }
+
+                // 전역 변수 설정 (디버깅용)
+                window.univer = univer;
+                window.workbook = workbook;
+
+            } catch (error) {
+                console.error('Failed to initialize Univer:', error);
+                document.querySelector('.loading').textContent = 'Error: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>

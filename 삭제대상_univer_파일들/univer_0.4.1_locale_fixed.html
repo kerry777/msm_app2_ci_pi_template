@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer 0.4.1 - Locale 문제 해결</title>
+
+    <!-- 필수 의존성 -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/rxjs@7.8.1/dist/bundles/rxjs.umd.min.js"></script>
+
+    <!-- @wendellhu/redi 추가 (의존성 해결) -->
+    <script src="https://unpkg.com/@wendellhu/redi@0.16.4/dist/umd/index.js"></script>
+
+    <!-- Univer Core 패키지들 -->
+    <script src="https://unpkg.com/@univerjs/protocol@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/core@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/design@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/engine-render@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/engine-formula@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@0.4.1/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-formula@0.4.1/lib/umd/index.js"></script>
+
+    <!-- Locale 파일들 -->
+    <script src="https://unpkg.com/@univerjs/core@0.4.1/lib/umd/locale/en-US.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@0.4.1/lib/umd/locale/en-US.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@0.4.1/lib/umd/locale/en-US.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@0.4.1/lib/umd/locale/en-US.js"></script>
+
+    <!-- 스타일 -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@0.4.1/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@0.4.1/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@0.4.1/lib/index.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        #app { width: 100%; height: 100%; }
+        .console {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 150px;
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 10px;
+            overflow-y: auto;
+            border-top: 2px solid #0f0;
+            z-index: 999999;
+        }
+        .error { color: #f00; }
+        .warn { color: #ff0; }
+        .success { color: #0f0; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <div class="console" id="console"></div>
+
+    <script>
+        const consoleEl = document.getElementById('console');
+        function log(msg, type = '') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            consoleEl.appendChild(div);
+            console.log(msg);
+        }
+
+        async function initUniver() {
+            log('Starting Univer with Locale fix...');
+
+            // 스크립트 로드 대기
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            try {
+                log('Checking globals...');
+
+                // 전역 객체 확인
+                if (!window.UniverCore) {
+                    throw new Error('UniverCore not found');
+                }
+
+                // Locale 데이터 병합
+                log('Merging locale data...', 'warn');
+
+                const enUS = {};
+
+                // 각 패키지의 locale 데이터 수집
+                if (window.UniverCoreEnUS) {
+                    Object.assign(enUS, window.UniverCoreEnUS);
+                    log('✓ Core locale loaded', 'success');
+                }
+                if (window.UniverUiEnUS) {
+                    Object.assign(enUS, window.UniverUiEnUS);
+                    log('✓ UI locale loaded', 'success');
+                }
+                if (window.UniverSheetsEnUS) {
+                    Object.assign(enUS, window.UniverSheetsEnUS);
+                    log('✓ Sheets locale loaded', 'success');
+                }
+                if (window.UniverSheetsUiEnUS) {
+                    Object.assign(enUS, window.UniverSheetsUiEnUS);
+                    log('✓ Sheets UI locale loaded', 'success');
+                }
+
+                log('Creating Univer instance...', 'warn');
+
+                const { Univer, UniverInstanceType, LocaleType } = window.UniverCore;
+                const { defaultTheme } = window.UniverDesign;
+
+                // Univer 생성 (locale 포함)
+                const univer = new Univer({
+                    theme: defaultTheme,
+                    locale: LocaleType.EN_US,
+                    locales: {
+                        [LocaleType.EN_US]: enUS  // 병합된 locale 데이터 사용
+                    }
+                });
+
+                log('Registering plugins...', 'warn');
+
+                // 플러그인 등록
+                const plugins = [
+                    { module: window.UniverEngineRender, name: 'UniverRenderEnginePlugin' },
+                    { module: window.UniverEngineFormula, name: 'UniverFormulaEnginePlugin' },
+                    { module: window.UniverUi, name: 'UniverUIPlugin', config: { container: 'app' } },
+                    { module: window.UniverSheets, name: 'UniverSheetsPlugin' },
+                    { module: window.UniverSheetsUi, name: 'UniverSheetsUIPlugin' },
+                    { module: window.UniverSheetsFormula, name: 'UniverSheetsFormulaPlugin' }
+                ];
+
+                for (const { module, name, config } of plugins) {
+                    if (module && module[name]) {
+                        univer.registerPlugin(module[name], config);
+                        log(`✓ ${name} registered`, 'success');
+                    } else {
+                        log(`✗ ${name} not found`, 'error');
+                    }
+                }
+
+                log('Creating workbook...', 'warn');
+
+                // 워크북 생성
+                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                    id: 'workbook-01',
+                    appVersion: '0.4.1',
+                    name: 'MSM 견적서',
+                    locale: LocaleType.EN_US,
+                    sheetOrder: ['sheet-01'],
+                    sheets: {
+                        'sheet-01': {
+                            id: 'sheet-01',
+                            name: '견적서',
+                            rowCount: 100,
+                            columnCount: 20,
+                            defaultRowHeight: 25,
+                            defaultColumnWidth: 100,
+                            rowData: {
+                                0: { h: 30 }
+                            },
+                            columnData: {
+                                1: { w: 200 },
+                                6: { w: 150 }
+                            },
+                            cellData: {
+                                0: {  // 헤더 행
+                                    0: { v: '품목코드', s: { bl: 1, bg: { rgb: '#f0f0f0' } } },
+                                    1: { v: '품목명', s: { bl: 1, bg: { rgb: '#f0f0f0' } } },
+                                    2: { v: '규격', s: { bl: 1, bg: { rgb: '#f0f0f0' } } },
+                                    3: { v: '수량', s: { bl: 1, bg: { rgb: '#f0f0f0' } } },
+                                    4: { v: '단가', s: { bl: 1, bg: { rgb: '#f0f0f0' } } },
+                                    5: { v: '금액', s: { bl: 1, bg: { rgb: '#f0f0f0' } } },
+                                    6: { v: '비고', s: { bl: 1, bg: { rgb: '#f0f0f0' } } }
+                                },
+                                1: {
+                                    0: { v: 'MD-001' },
+                                    1: { v: '수술용 메스' },
+                                    2: { v: '일회용' },
+                                    3: { v: 100, t: 2 },
+                                    4: { v: 5000, t: 2 },
+                                    5: { v: 500000, t: 2 },
+                                    6: { v: '긴급' }
+                                },
+                                2: {
+                                    0: { v: 'MD-002' },
+                                    1: { v: '의료용 거즈' },
+                                    2: { v: '10x10cm' },
+                                    3: { v: 500, t: 2 },
+                                    4: { v: 1000, t: 2 },
+                                    5: { v: 500000, t: 2 },
+                                    6: { v: '' }
+                                },
+                                3: {
+                                    0: { v: 'MD-003' },
+                                    1: { v: '주사기' },
+                                    2: { v: '5ml' },
+                                    3: { v: 200, t: 2 },
+                                    4: { v: 3000, t: 2 },
+                                    5: { v: 600000, t: 2 },
+                                    6: { v: '' }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                log('✅✅✅ Univer initialized successfully!', 'success');
+
+                // 전역 저장
+                window.univer = univer;
+                window.workbook = workbook;
+
+                // DOM 확인
+                setTimeout(() => {
+                    const app = document.getElementById('app');
+                    const stats = {
+                        children: app.children.length,
+                        canvas: app.querySelectorAll('canvas').length,
+                        univer: app.querySelectorAll('[class*="univer"]').length,
+                        height: app.offsetHeight
+                    };
+
+                    log(`DOM: children=${stats.children}, canvas=${stats.canvas}, univer=${stats.univer}`,
+                        stats.children > 0 ? 'success' : 'error');
+
+                    if (stats.children > 0 && stats.canvas > 0) {
+                        log('🎉🎉🎉 UNIVER IS RENDERING! 🎉🎉🎉', 'success');
+                    } else {
+                        log('⚠️ Still no rendering...', 'error');
+                    }
+                }, 2000);
+
+            } catch (error) {
+                log(`ERROR: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // 페이지 로드 후 실행
+        window.addEventListener('DOMContentLoaded', initUniver);
+    </script>
+</body>
+</html>

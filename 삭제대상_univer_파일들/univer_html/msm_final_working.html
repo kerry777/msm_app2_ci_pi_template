@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏥 MSM Excel 뷰어 - 최종 완성 버전</title>
+
+    <!-- Univer Preset UMD - 안정적인 버전 -->
+    <script src="https://unpkg.com/@univerjs/presets/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/index.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core/lib/index.css">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.9);
+            color: #2c3e50;
+            padding: 15px 25px;
+            margin: 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        #container {
+            margin: 20px;
+            height: calc(100vh - 200px);
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .data-info {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            margin: 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .data-info strong {
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏥 MSM Excel 뷰어 - 최종 완성 버전</h1>
+        <p>실제 MEKICS 의료기기 견적서 데이터</p>
+    </div>
+
+    <div class="status" id="status">초기화 중...</div>
+
+    <div class="data-info">
+        <strong>✅ 실제 MSM 데이터:</strong><br>
+        • MV0019_00 - Ventilator MTV1000 (¥50,000 × 10개 = ¥500,000)<br>
+        • PG0086_03 - Mobile Cart (¥80,000 × 5개 = ¥400,000)<br>
+        • PG0044_00 - Breathing Circuit Arm Support (¥30,000 × 8개 = ¥240,000)<br>
+        <strong>총 합계: ¥1,140,000</strong>
+    </div>
+
+    <div id="container"></div>
+
+    <script>
+        let univer = null;
+
+        function setStatus(msg) {
+            document.getElementById('status').textContent = msg;
+            console.log('📋 상태:', msg);
+        }
+
+        async function initUniver() {
+            try {
+                setStatus('🚀 Univer Preset 초기화 중...');
+
+                // Univer Preset 라이브러리 로딩 대기
+                let attempts = 0;
+                while (attempts < 50) {
+                    if (window.UniverPresets && window.UniverPresetSheetsCore) {
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                if (!window.UniverPresets || !window.UniverPresetSheetsCore) {
+                    throw new Error('Univer 라이브러리 로드 실패');
+                }
+
+                setStatus('🎯 Univer 인스턴스 생성 중...');
+
+                const { UniverPresets } = window;
+
+                // Preset 모드로 Univer 생성 (안정적)
+                univer = UniverPresets.createUniver({
+                    container: document.getElementById('container'),
+                    locale: 'ko-KR'  // 한국어로 설정
+                });
+
+                setStatus('📊 실제 MSM 워크북 생성 중...');
+
+                // 실제 MSM 견적서 데이터로 워크북 생성
+                const workbook = univer.createUnit('sheet', {
+                    name: 'MSM 실제 견적서',
+                    sheetOrder: ['sheet1'],
+                    sheets: {
+                        sheet1: {
+                            name: 'MEKICS 견적서',
+                            cellData: {
+                                // 헤더
+                                0: {
+                                    0: { v: '품목코드', s: { fontWeight: 'bold', backgroundColor: '#f8f9fa' } },
+                                    1: { v: '품목명', s: { fontWeight: 'bold', backgroundColor: '#f8f9fa' } },
+                                    2: { v: '수량', s: { fontWeight: 'bold', backgroundColor: '#f8f9fa' } },
+                                    3: { v: '단가(¥)', s: { fontWeight: 'bold', backgroundColor: '#f8f9fa' } },
+                                    4: { v: '금액(¥)', s: { fontWeight: 'bold', backgroundColor: '#f8f9fa' } }
+                                },
+                                // 실제 MSM 데이터 1
+                                1: {
+                                    0: { v: 'MV0019_00' },
+                                    1: { v: 'Ventilator MTV1000' },
+                                    2: { v: 10 },
+                                    3: { v: 50000 },
+                                    4: { v: 500000, s: { backgroundColor: '#e8f5e8' } }
+                                },
+                                // 실제 MSM 데이터 2
+                                2: {
+                                    0: { v: 'PG0086_03' },
+                                    1: { v: 'Mobile Cart' },
+                                    2: { v: 5 },
+                                    3: { v: 80000 },
+                                    4: { v: 400000, s: { backgroundColor: '#e8f5e8' } }
+                                },
+                                // 실제 MSM 데이터 3
+                                3: {
+                                    0: { v: 'PG0044_00' },
+                                    1: { v: 'Breathing Circuit Arm Support' },
+                                    2: { v: 8 },
+                                    3: { v: 30000 },
+                                    4: { v: 240000, s: { backgroundColor: '#e8f5e8' } }
+                                },
+                                // 빈 행
+                                4: {
+                                    0: { v: '' },
+                                    1: { v: '' },
+                                    2: { v: '' },
+                                    3: { v: '' },
+                                    4: { v: '' }
+                                },
+                                // 합계
+                                5: {
+                                    0: { v: '' },
+                                    1: { v: '총 합계', s: { fontWeight: 'bold', backgroundColor: '#fff2cc' } },
+                                    2: { v: 23, s: { fontWeight: 'bold', backgroundColor: '#fff2cc' } },
+                                    3: { v: '', s: { backgroundColor: '#fff2cc' } },
+                                    4: { v: 1140000, s: { fontWeight: 'bold', backgroundColor: '#fff2cc' } }
+                                }
+                            },
+                            rowCount: 100,
+                            columnCount: 10
+                        }
+                    }
+                });
+
+                setStatus('✅ MSM Excel 뷰어 완성! 실제 MEKICS 데이터 표시 중');
+
+                // 성공 메시지
+                setTimeout(() => {
+                    setStatus('🎉 완성! 실제 MSM 견적서: Ventilator MTV1000, Mobile Cart, Breathing Circuit');
+                }, 2000);
+
+            } catch (error) {
+                console.error('❌ 초기화 실패:', error);
+                setStatus('❌ 초기화 실패: ' + error.message);
+            }
+        }
+
+        // 페이지 로드 후 초기화
+        window.addEventListener('load', initUniver);
+    </script>
+</body>
+</html>

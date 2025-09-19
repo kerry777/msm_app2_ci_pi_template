@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer Latest Version</title>
+
+    <!-- Use latest stable version -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@latest/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@latest/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@latest/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-formula-ui@latest/lib/index.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; }
+        #app { width: 100%; height: 100%; }
+        .status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border-radius: 5px;
+            z-index: 999999;
+            font-size: 14px;
+        }
+        .status.success { background: #28a745; }
+        .status.error { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Loading...</div>
+    <div id="app"></div>
+
+    <!-- Load React first -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/rxjs@7.8.1/dist/bundles/rxjs.umd.min.js"></script>
+
+    <!-- Load Univer latest -->
+    <script src="https://unpkg.com/@univerjs/core@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/design@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/engine-render@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/engine-formula@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-formula@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-formula-ui@latest/lib/umd/index.js"></script>
+
+    <script>
+        const status = document.getElementById('status');
+
+        // Wait for all scripts to load
+        window.addEventListener('load', async function() {
+            try {
+                status.textContent = 'Checking modules...';
+
+                // Check what's loaded
+                console.log('Modules check:', {
+                    UniverCore: !!window.UniverCore,
+                    UniverDesign: !!window.UniverDesign,
+                    UniverEngineRender: !!window.UniverEngineRender,
+                    UniverUi: !!window.UniverUi,
+                    UniverSheets: !!window.UniverSheets,
+                    UniverSheetsUi: !!window.UniverSheetsUi
+                });
+
+                if (!window.UniverCore) {
+                    throw new Error('UniverCore not loaded');
+                }
+
+                status.textContent = 'Creating Univer...';
+
+                const { Univer, UniverInstanceType, LocaleType } = window.UniverCore;
+                const { defaultTheme } = window.UniverDesign;
+                const { UniverRenderEnginePlugin } = window.UniverEngineRender;
+                const { UniverFormulaEnginePlugin } = window.UniverEngineFormula;
+                const { UniverUIPlugin } = window.UniverUi;
+                const { UniverSheetsPlugin } = window.UniverSheets;
+                const { UniverSheetsUIPlugin } = window.UniverSheetsUi;
+                const { UniverSheetsFormulaPlugin } = window.UniverSheetsFormula || {};
+                const { UniverSheetsFormulaUIPlugin } = window.UniverSheetsFormulaUi || {};
+
+                // Create Univer instance
+                const univer = new Univer({
+                    theme: defaultTheme,
+                    locale: LocaleType.EN_US
+                });
+
+                status.textContent = 'Registering plugins...';
+
+                // Register plugins in correct order
+                univer.registerPlugin(UniverRenderEnginePlugin);
+                univer.registerPlugin(UniverFormulaEnginePlugin);
+
+                univer.registerPlugin(UniverUIPlugin, {
+                    container: document.getElementById('app')
+                });
+
+                univer.registerPlugin(UniverSheetsPlugin);
+                univer.registerPlugin(UniverSheetsUIPlugin);
+
+                if (UniverSheetsFormulaPlugin) {
+                    univer.registerPlugin(UniverSheetsFormulaPlugin);
+                }
+                if (UniverSheetsFormulaUIPlugin) {
+                    univer.registerPlugin(UniverSheetsFormulaUIPlugin);
+                }
+
+                status.textContent = 'Creating workbook...';
+
+                // Create workbook
+                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                    id: 'workbook-01',
+                    appVersion: '0.1.0',
+                    name: 'Test Workbook',
+                    sheets: [
+                        {
+                            id: 'sheet-01',
+                            name: 'Sheet1',
+                            rowCount: 100,
+                            columnCount: 20,
+                            cellData: {
+                                0: {
+                                    0: { v: 'A1' },
+                                    1: { v: 'B1' },
+                                    2: { v: 'C1' }
+                                },
+                                1: {
+                                    0: { v: 'A2' },
+                                    1: { v: 'B2' },
+                                    2: { v: 'C2' }
+                                }
+                            }
+                        }
+                    ]
+                });
+
+                status.textContent = '✅ Success!';
+                status.className = 'status success';
+
+                window.univer = univer;
+                window.workbook = workbook;
+
+                console.log('✅ Univer initialized!');
+
+                // Check rendering after 1 second
+                setTimeout(() => {
+                    const app = document.getElementById('app');
+                    console.log('Render check:', {
+                        children: app.children.length,
+                        canvas: document.querySelectorAll('canvas').length,
+                        univerElements: document.querySelectorAll('[class*="univer"]').length
+                    });
+                }, 1000);
+
+            } catch (error) {
+                status.textContent = 'Error: ' + error.message;
+                status.className = 'status error';
+                console.error('Init error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

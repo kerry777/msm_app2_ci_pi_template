@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Univer POC (안전 초기화 + 폴백)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height:1.5; padding:16px; }
+    #log { white-space: pre-wrap; background:#111; color:#ddd; padding:12px; border-radius:8px; max-height:40vh; overflow:auto; }
+    .ok { color:#8bf18b; } .warn{ color:#ffd37a; } .err{ color:#ff8c8c; }
+    #app { margin-top:16px; border:1px solid #ddd; padding:12px; border-radius:8px; min-height:120px; }
+  </style>
+
+  <!-- TODO: 아래 3개는 실제 프로젝트에서 사용하는 Univer UMD 번들로 교체하세요.
+       (현재는 주석 처리되어 있어도 이 페이지는 오류 없이 동작합니다) -->
+  <!--
+  <script data-univer src="./libs/univer-core.umd.js" defer></script>
+  <script data-univer src="./libs/univer-sheets.umd.js" defer></script>
+  <script data-univer src="./libs/univer-ui.umd.js" defer></script>
+  -->
+
+  <script src="./univer-loader.js"></script>
+</head>
+<body>
+  <h1>Univer POC</h1>
+  <p>이 페이지는 Univer 번들이 없어도 <em>절대 에러를 던지지</em> 않고, 있으면 자동 초기화합니다.</p>
+
+  <div id="log"></div>
+  <div id="controls">
+    <input type="file" id="file" accept=".xlsx,.xls" />
+  </div>
+  <div id="app"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer Facade API - 간단한 API 사용</title>
+
+    <!-- 의존성 -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/rxjs@7.8.1/dist/bundles/rxjs.umd.min.js"></script>
+
+    <!-- Univer Facade 번들 -->
+    <script src="https://unpkg.com/@univerjs/facade/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/umd@0.5.2/lib/univer.full.umd.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/umd@0.5.2/lib/univer.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        #app { width: 100%; height: 100%; }
+        .console {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            height: 150px;
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            font-size: 10px;
+            padding: 10px;
+            overflow-y: auto;
+            border: 1px solid #0f0;
+            z-index: 999999;
+        }
+        .console div { margin: 2px 0; }
+        .error { color: #f00; }
+        .warn { color: #ff0; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    <div class="console" id="console">
+        <div>Univer Facade API Test...</div>
+    </div>
+
+    <script>
+        const consoleEl = document.getElementById('console');
+        const print = (msg, type = '') => {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = msg;
+            consoleEl.appendChild(div);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+            console.log(msg);
+        };
+
+        async function initWithFacade() {
+            print('Starting Facade API initialization...');
+
+            // 로드 대기
+            await new Promise(r => setTimeout(r, 2000));
+
+            try {
+                // Facade 확인
+                print('Checking Facade availability...');
+
+                if (window.UniverFacade) {
+                    print('✓ UniverFacade found', 'warn');
+
+                    // Facade를 통한 초기화
+                    const { FUniver } = window.UniverFacade;
+
+                    if (FUniver) {
+                        print('Creating FUniver instance...', 'warn');
+
+                        const univerAPI = FUniver.newAPI({
+                            locale: 'en-US',
+                            container: document.getElementById('app')
+                        });
+
+                        print('✓ FUniver API created');
+
+                        // 워크북 생성
+                        const workbook = univerAPI.createUniverSheet({
+                            name: 'MSM 견적서'
+                        });
+
+                        print('✓ Workbook created');
+
+                        // 데이터 설정
+                        const sheet = workbook.getActiveSheet();
+                        if (sheet) {
+                            // 헤더 설정
+                            sheet.getRange('A1:G1').setValues([
+                                ['품목코드', '품목명', '규격', '수량', '단가', '금액', '비고']
+                            ]);
+
+                            // 데이터 입력
+                            sheet.getRange('A2:G6').setValues([
+                                ['MD-001', '수술용 메스', '일회용', 100, 5000, 500000, '긴급'],
+                                ['MD-002', '의료용 거즈', '10x10cm', 500, 1000, 500000, ''],
+                                ['MD-003', '주사기', '5ml', 200, 3000, 600000, ''],
+                                ['MD-004', '수액세트', '표준형', 150, 8000, 1200000, '재고확인'],
+                                ['MD-005', '진단키트', 'COVID-19', 50, 15000, 750000, '예약주문']
+                            ]);
+
+                            print('✓ Data loaded');
+                        }
+
+                        window.univerAPI = univerAPI;
+
+                    } else {
+                        print('✗ FUniver not found in Facade', 'error');
+                    }
+
+                } else if (window.UniverCore) {
+                    print('UniverFacade not found, trying direct initialization...', 'warn');
+
+                    // 직접 초기화 시도
+                    const { Univer, UniverInstanceType, LocaleType } = window.UniverCore;
+
+                    const univer = new Univer({
+                        locale: LocaleType?.EN_US || 'en-US'
+                    });
+
+                    // 플러그인 등록
+                    const plugins = [
+                        { obj: window.UniverEngineRender, name: 'UniverRenderEnginePlugin' },
+                        { obj: window.UniverEngineFormula, name: 'UniverFormulaEnginePlugin' },
+                        { obj: window.UniverUi, name: 'UniverUIPlugin', config: { container: 'app' } },
+                        { obj: window.UniverSheets, name: 'UniverSheetsPlugin' },
+                        { obj: window.UniverSheetsUi, name: 'UniverSheetsUIPlugin' }
+                    ];
+
+                    plugins.forEach(({ obj, name, config }) => {
+                        if (obj && obj[name]) {
+                            univer.registerPlugin(obj[name], config);
+                            print(`✓ ${name} registered`);
+                        }
+                    });
+
+                    // 워크북 생성
+                    const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                        id: 'workbook-01',
+                        name: 'MSM 견적서'
+                    });
+
+                    print('✓ Direct initialization complete');
+                    window.univer = univer;
+
+                } else {
+                    print('✗ Neither Facade nor Core found!', 'error');
+                }
+
+                // DOM 확인
+                setTimeout(() => {
+                    const app = document.getElementById('app');
+                    const hasContent = app.children.length > 0;
+                    print(`DOM Check: ${hasContent ? '✓ RENDERED' : '✗ EMPTY'}`, hasContent ? 'warn' : 'error');
+
+                    if (!hasContent) {
+                        print('Available globals: ' + Object.keys(window).filter(k =>
+                            k.toLowerCase().includes('univer')).join(', '));
+                    }
+                }, 2000);
+
+            } catch (error) {
+                print(`ERROR: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', initWithFacade);
+    </script>
+</body>
+</html>

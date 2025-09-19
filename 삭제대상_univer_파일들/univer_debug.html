@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer Debug Version</title>
+
+    <!-- Fix getLocation -->
+    <script>
+        window.getLocation = () => ({ pathname: '/', search: '', hash: '', state: null });
+        Object.prototype.getLocation = window.getLocation;
+    </script>
+
+    <!-- Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/rxjs@7.5.7/dist/bundles/rxjs.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@wendellhu/redi@0.12.13/dist/redi.js"></script>
+
+    <!-- Univer CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@univerjs/design@0.1.17/lib/index.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@univerjs/ui@0.1.17/lib/index.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@univerjs/sheets-ui@0.1.17/lib/index.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@univerjs/sheets-numfmt@0.1.17/lib/index.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@univerjs/sheets-conditional-formatting-ui@0.1.17/lib/index.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #app {
+            position: absolute;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            background: #f0f0f0;
+        }
+
+        .status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border-radius: 5px;
+            z-index: 999999;
+            font-family: monospace;
+        }
+
+        /* Force Univer to show */
+        .univer-container {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        canvas {
+            display: block !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Initializing...</div>
+    <div id="app"></div>
+
+    <!-- Univer JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/core@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/design@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/engine-render@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/engine-formula@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/ui@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/sheets@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/sheets-ui@0.1.17/lib/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@univerjs/sheets-numfmt@0.1.17/lib/umd/index.js"></script>
+
+    <script>
+        window.addEventListener('error', (e) => {
+            if (e.message?.includes('getLocation')) {
+                e.preventDefault();
+                return false;
+            }
+        }, true);
+
+        async function init() {
+            const status = document.getElementById('status');
+
+            // Wait for all modules
+            await new Promise(resolve => {
+                const check = setInterval(() => {
+                    if (window.UniverCore && window.UniverUi && window.UniverSheets && window.UniverSheetsUi) {
+                        clearInterval(check);
+                        resolve();
+                    }
+                }, 100);
+            });
+
+            try {
+                status.textContent = 'Creating Univer...';
+
+                // Get Univer constructor
+                const { Univer, UniverInstanceType } = window.UniverCore;
+
+                // Create Univer with explicit locale
+                const univer = new Univer({
+                    theme: {
+                        colorScheme: 'light'
+                    },
+                    locale: 'en-US',
+                    locales: {}
+                });
+
+                status.textContent = 'Getting plugins...';
+
+                // Get plugins
+                const UIPlugin = window.UniverUi.UniverUIPlugin || window.UniverUi.default || window.UniverUi;
+                const SheetsPlugin = window.UniverSheets.UniverSheetsPlugin || window.UniverSheets.default || window.UniverSheets;
+                const SheetsUIPlugin = window.UniverSheetsUi.UniverSheetsUIPlugin || window.UniverSheetsUi.default || window.UniverSheetsUi;
+                const RenderEngine = window.UniverEngineRender?.UniverRenderEnginePlugin || window.UniverEngineRender;
+
+                console.log('Plugins found:', {
+                    UI: !!UIPlugin,
+                    Sheets: !!SheetsPlugin,
+                    SheetsUI: !!SheetsUIPlugin,
+                    RenderEngine: !!RenderEngine
+                });
+
+                status.textContent = 'Registering plugins...';
+
+                // Register render engine if available
+                if (RenderEngine && typeof RenderEngine === 'function') {
+                    univer.registerPlugin(RenderEngine);
+                }
+
+                // Register UI plugin with container
+                if (typeof UIPlugin === 'function') {
+                    univer.registerPlugin(UIPlugin, {
+                        container: 'app',  // Try string ID instead of element
+                        header: true,
+                        toolbar: true,
+                        footer: false
+                    });
+                } else if (UIPlugin) {
+                    univer.registerPlugin(UIPlugin);
+                }
+
+                // Register sheets plugins
+                if (typeof SheetsPlugin === 'function') {
+                    univer.registerPlugin(SheetsPlugin);
+                } else if (SheetsPlugin) {
+                    univer.registerPlugin(SheetsPlugin);
+                }
+
+                if (typeof SheetsUIPlugin === 'function') {
+                    univer.registerPlugin(SheetsUIPlugin);
+                } else if (SheetsUIPlugin) {
+                    univer.registerPlugin(SheetsUIPlugin);
+                }
+
+                status.textContent = 'Creating workbook...';
+
+                // Create a simple workbook
+                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                    id: 'test-workbook',
+                    appVersion: '0.1.17',
+                    name: 'Test',
+                    sheetOrder: ['sheet1'],
+                    sheets: {
+                        'sheet1': {
+                            id: 'sheet1',
+                            name: 'Sheet1',
+                            rowCount: 1000,
+                            columnCount: 20,
+                            cellData: {
+                                0: {
+                                    0: { v: 'A1 Test' },
+                                    1: { v: 'B1 Data' },
+                                    2: { v: 'C1 Value' }
+                                },
+                                1: {
+                                    0: { v: 100 },
+                                    1: { v: 200 },
+                                    2: { v: 300 }
+                                }
+                            },
+                            rowData: {
+                                0: { h: 30 }
+                            },
+                            columnData: [
+                                { w: 100 },
+                                { w: 100 },
+                                { w: 100 }
+                            ]
+                        }
+                    }
+                });
+
+                window.univer = univer;
+                window.workbook = workbook;
+
+                status.textContent = '✅ SUCCESS!';
+                status.style.background = 'green';
+
+                // Check rendering
+                setTimeout(() => {
+                    const app = document.getElementById('app');
+                    console.log('=== Render Check ===');
+                    console.log('App element:', app);
+                    console.log('App dimensions:', app.offsetWidth, 'x', app.offsetHeight);
+                    console.log('App children:', app.children.length);
+                    console.log('Canvas count:', document.querySelectorAll('canvas').length);
+                    console.log('Univer containers:', document.querySelectorAll('[class*="univer"]').length);
+
+                    if (app.children.length === 0) {
+                        console.error('❌ No children in app container!');
+
+                        // Try to force render
+                        console.log('Attempting manual render...');
+                        if (window.univer && window.univer.render) {
+                            window.univer.render();
+                        }
+                    }
+
+                    // Check computed styles
+                    const appStyle = window.getComputedStyle(app);
+                    console.log('App display:', appStyle.display);
+                    console.log('App position:', appStyle.position);
+                    console.log('App visibility:', appStyle.visibility);
+                }, 1000);
+
+            } catch (error) {
+                status.textContent = 'Error: ' + error.message;
+                status.style.background = 'red';
+                console.error('Init failed:', error);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

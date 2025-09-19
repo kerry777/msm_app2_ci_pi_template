@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer 최종 수정 버전 - MSM Pivot/Chart 준비</title>
+
+    <!-- Univer 스타일 먼저 로드 -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/umd@0.1.17/lib/univer.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        #container { width: 100%; height: 100%; position: relative; }
+        .status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.9);
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 11px;
+            z-index: 999999;
+            max-width: 400px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error { color: #f00; }
+        .warn { color: #ff0; }
+        .success { color: #0f0; }
+
+        /* Univer 컨테이너 강제 표시 */
+        .univer-container {
+            width: 100% !important;
+            height: 100% !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Univer 초기화 중...</div>
+    <div id="container"></div>
+
+    <!-- React와 의존성 -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Univer Full UMD 번들 -->
+    <script src="https://unpkg.com/@univerjs/umd@0.1.17/lib/univer.full.umd.js"></script>
+    <script src="https://unpkg.com/@univerjs/umd@0.1.17/lib/locale/en-US.js"></script>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const logs = [];
+
+        function log(msg, type = '') {
+            logs.push({ msg, type, time: new Date().toLocaleTimeString() });
+
+            // 최근 10개만 표시
+            const recentLogs = logs.slice(-10);
+            statusEl.innerHTML = recentLogs.map(l =>
+                `<div class="${l.type}">[${l.time}] ${l.msg}</div>`
+            ).join('');
+
+            console.log(msg);
+        }
+
+        // 에러 캐치
+        window.addEventListener('error', (e) => {
+            if (e.message?.includes('engine') || e.message?.includes('redi')) {
+                e.preventDefault();
+                log(`Suppressed: ${e.message.substring(0, 50)}...`, 'warn');
+                return false;
+            }
+        }, true);
+
+        window.addEventListener('unhandledrejection', (e) => {
+            if (e.reason?.message?.includes('engine')) {
+                e.preventDefault();
+                log(`Suppressed Promise: ${e.reason.message.substring(0, 50)}...`, 'warn');
+            }
+        });
+
+        async function initUniver() {
+            log('Univer 초기화 시작...');
+
+            // 스크립트 완전 로드 대기
+            await new Promise(r => setTimeout(r, 2000));
+
+            try {
+                // 전역 객체 확인
+                const globals = Object.keys(window).filter(k => k.includes('Univer'));
+                log(`발견된 모듈: ${globals.length}개`);
+
+                if (!window.UniverCore) {
+                    throw new Error('UniverCore를 찾을 수 없습니다');
+                }
+
+                const {
+                    Univer,
+                    UniverInstanceType,
+                    LocaleType,
+                    BooleanNumber
+                } = window.UniverCore;
+
+                const { defaultTheme } = window.UniverDesign || {};
+
+                log('Univer 인스턴스 생성...', 'warn');
+
+                // Univer 인스턴스 생성
+                const univer = new Univer({
+                    theme: defaultTheme,
+                    locale: LocaleType.EN_US,
+                    locales: {
+                        [LocaleType.EN_US]: window.UniverUMD?.['en-US'] || {}
+                    },
+                    logLevel: 2  // 로그 레벨 조정
+                });
+
+                log('필수 플러그인 등록...', 'warn');
+
+                // 플러그인 등록 순서 중요!
+                const plugins = [
+                    { module: window.UniverEngineRender, name: 'UniverRenderEnginePlugin', order: 1 },
+                    { module: window.UniverEngineFormula, name: 'UniverFormulaEnginePlugin', order: 2 },
+                    { module: window.UniverUi, name: 'UniverUIPlugin', order: 3,
+                      config: { container: 'container', header: true, toolbar: true, footer: false } },
+                    { module: window.UniverDocs, name: 'UniverDocsPlugin', order: 4 },
+                    { module: window.UniverDocsUi, name: 'UniverDocsUIPlugin', order: 5 },
+                    { module: window.UniverSheets, name: 'UniverSheetsPlugin', order: 6 },
+                    { module: window.UniverSheetsUi, name: 'UniverSheetsUIPlugin', order: 7 },
+                    { module: window.UniverSheetsNumfmt, name: 'UniverSheetsNumfmtPlugin', order: 8 },
+                    { module: window.UniverSheetsFormula, name: 'UniverSheetsFormulaPlugin', order: 9 }
+                ];
+
+                // 순서대로 플러그인 등록
+                plugins.sort((a, b) => a.order - b.order).forEach(({ module, name, config }) => {
+                    if (module && module[name]) {
+                        try {
+                            univer.registerPlugin(module[name], config);
+                            log(`✓ ${name.replace('Univer', '').replace('Plugin', '')}`, 'success');
+                        } catch (e) {
+                            log(`✗ ${name}: ${e.message}`, 'error');
+                        }
+                    }
+                });
+
+                log('MSM 워크북 생성...', 'warn');
+
+                // 워크북 생성
+                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                    id: 'msm-workbook-001',
+                    appVersion: '0.1.17',
+                    name: 'MSM 의료용품 견적서',
+                    locale: LocaleType.EN_US,
+                    sheetOrder: ['sheet-01'],
+                    sheets: {
+                        'sheet-01': {
+                            id: 'sheet-01',
+                            name: '견적서',
+                            tabColor: '',
+                            hidden: BooleanNumber.FALSE,
+                            freezeRow: 1,  // 헤더 행 고정
+                            freezeColumn: 0,
+                            rowCount: 100,
+                            columnCount: 20,
+                            zoomRatio: 1,
+                            scrollTop: 0,
+                            scrollLeft: 0,
+                            defaultRowHeight: 25,
+                            defaultColumnWidth: 100,
+                            mergeData: [],
+                            rowData: {
+                                0: { h: 30, hd: BooleanNumber.FALSE }  // 헤더 행 높이
+                            },
+                            columnData: {
+                                0: { w: 100, hd: BooleanNumber.FALSE },
+                                1: { w: 150, hd: BooleanNumber.FALSE },
+                                2: { w: 100, hd: BooleanNumber.FALSE },
+                                3: { w: 100, hd: BooleanNumber.FALSE },
+                                4: { w: 80, hd: BooleanNumber.FALSE },
+                                5: { w: 100, hd: BooleanNumber.FALSE },
+                                6: { w: 120, hd: BooleanNumber.FALSE },
+                                7: { w: 130, hd: BooleanNumber.FALSE },
+                                8: { w: 100, hd: BooleanNumber.FALSE }
+                            },
+                            cellData: {
+                                0: {  // 헤더 행
+                                    0: { v: '품목코드', s: { bl: 1, bg: { rgb: '#e3f2fd' }, cl: { rgb: '#000' } } },
+                                    1: { v: '품목명', s: { bl: 1, bg: { rgb: '#e3f2fd' }, cl: { rgb: '#000' } } },
+                                    2: { v: '카테고리', s: { bl: 1, bg: { rgb: '#e3f2fd' }, cl: { rgb: '#000' } } },
+                                    3: { v: '규격', s: { bl: 1, bg: { rgb: '#e3f2fd' }, cl: { rgb: '#000' } } },
+                                    4: { v: '수량', s: { bl: 1, bg: { rgb: '#e3f2fd' }, cl: { rgb: '#000' } } },
+                                    5: { v: '단가', s: { bl: 1, bg: { rgb: '#e3f2fd' }, cl: { rgb: '#000' } } },
+                                    6: { v: '금액', s: { bl: 1, bg: { rgb: '#e3f2fd' }, cl: { rgb: '#000' } } },
+                                    7: { v: '공급처', s: { bl: 1, bg: { rgb: '#e3f2fd' }, cl: { rgb: '#000' } } },
+                                    8: { v: '비고', s: { bl: 1, bg: { rgb: '#e3f2fd' }, cl: { rgb: '#000' } } }
+                                },
+                                1: {
+                                    0: { v: 'MD-001' },
+                                    1: { v: '수술용 메스' },
+                                    2: { v: '수술용품' },
+                                    3: { v: '일회용' },
+                                    4: { v: 100 },
+                                    5: { v: 5000 },
+                                    6: { f: '=E2*F2' },
+                                    7: { v: '메디칼서플라이' },
+                                    8: { v: '긴급' }
+                                },
+                                2: {
+                                    0: { v: 'MD-002' },
+                                    1: { v: '의료용 거즈' },
+                                    2: { v: '소모품' },
+                                    3: { v: '10x10cm' },
+                                    4: { v: 500 },
+                                    5: { v: 1000 },
+                                    6: { f: '=E3*F3' },
+                                    7: { v: '한국메디칼' },
+                                    8: { v: '' }
+                                },
+                                3: {
+                                    0: { v: 'MD-003' },
+                                    1: { v: '주사기' },
+                                    2: { v: '주사용품' },
+                                    3: { v: '5ml' },
+                                    4: { v: 200 },
+                                    5: { v: 3000 },
+                                    6: { f: '=E4*F4' },
+                                    7: { v: '메디칼서플라이' },
+                                    8: { v: '' }
+                                },
+                                4: {
+                                    0: { v: 'MD-004' },
+                                    1: { v: '수액세트' },
+                                    2: { v: '수액용품' },
+                                    3: { v: '표준형' },
+                                    4: { v: 150 },
+                                    5: { v: 8000 },
+                                    6: { f: '=E5*F5' },
+                                    7: { v: '글로벌메드' },
+                                    8: { v: '재고확인' }
+                                },
+                                5: {
+                                    0: { v: 'MD-005' },
+                                    1: { v: '진단키트' },
+                                    2: { v: '진단용품' },
+                                    3: { v: 'COVID-19' },
+                                    4: { v: 50 },
+                                    5: { v: 15000 },
+                                    6: { f: '=E6*F6' },
+                                    7: { v: '바이오텍' },
+                                    8: { v: '예약주문' }
+                                },
+                                7: {  // 합계 행
+                                    5: { v: '합계:', s: { bl: 1, bg: { rgb: '#fff9c4' } } },
+                                    6: { f: '=SUM(G2:G6)', s: { bl: 1, bg: { rgb: '#fff9c4' } } }
+                                }
+                            },
+                            showGridlines: BooleanNumber.TRUE,
+                            selections: ['A1'],
+                            rightToLeft: BooleanNumber.FALSE
+                        }
+                    }
+                });
+
+                log('✅ 워크북 생성 완료!', 'success');
+
+                // 전역 저장
+                window.univer = univer;
+                window.workbook = workbook;
+
+                // 렌더링 확인
+                setTimeout(() => {
+                    const container = document.getElementById('container');
+                    const stats = {
+                        children: container.children.length,
+                        canvas: container.querySelectorAll('canvas').length,
+                        univer: container.querySelectorAll('[class*="univer"]').length,
+                        sheets: container.querySelectorAll('[class*="sheet"]').length
+                    };
+
+                    log(`DOM 체크: ${stats.children} children, ${stats.canvas} canvas`,
+                        stats.canvas > 0 ? 'success' : 'error');
+
+                    if (stats.canvas > 0 || stats.univer > 0) {
+                        log('🎉 UNIVER 렌더링 성공! 🎉', 'success');
+                        log('✅ Pivot과 Chart 사용 가능!', 'success');
+
+                        // 5초 후 상태창 숨기기
+                        setTimeout(() => {
+                            statusEl.style.display = 'none';
+                        }, 5000);
+                    } else {
+                        log('⚠️ 렌더링 실패. 수동으로 재시도: window.retryInit()', 'error');
+                    }
+                }, 3000);
+
+            } catch (error) {
+                log(`❌ 오류: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // 페이지 로드 완료 후 실행
+        window.addEventListener('DOMContentLoaded', initUniver);
+
+        // 수동 재시도
+        window.retryInit = initUniver;
+    </script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer Excel - Without Redi</title>
+
+    <!-- Fix getLocation FIRST -->
+    <script>
+        window.getLocation = function() {
+            return { pathname: '/', search: '', hash: '', state: null, key: 'default' };
+        };
+        Object.defineProperty(Object.prototype, 'getLocation', {
+            value: function() { return window.getLocation(); },
+            writable: true,
+            configurable: true
+        });
+    </script>
+
+    <!-- Load order is CRITICAL -->
+    <!-- 1. RxJS first (required by Univer) -->
+    <script src="https://unpkg.com/rxjs@7.5.7/dist/bundles/rxjs.umd.js"></script>
+
+    <!-- 2. React (also required) -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+
+    <!-- 3. Univer CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/design@0.1.17/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/ui@0.1.17/lib/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/index.css">
+
+    <style>
+        * { margin: 0; padding: 0; }
+        body { font-family: sans-serif; }
+        #app { width: 100vw; height: 100vh; }
+        #status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border-radius: 5px;
+            z-index: 999999;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Loading...</div>
+    <div id="app"></div>
+
+    <!-- 4. Univer Core MUST come first -->
+    <script src="https://unpkg.com/@univerjs/core@0.1.17/lib/umd/index.js"></script>
+
+    <!-- 5. Then the rest of Univer -->
+    <script src="https://unpkg.com/@univerjs/design@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/ui@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@0.1.17/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@0.1.17/lib/umd/index.js"></script>
+
+    <script>
+        // Wait for everything to load
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds
+
+        function checkAndInit() {
+            attempts++;
+            const status = document.getElementById('status');
+
+            // Check if all modules are loaded
+            if (window.UniverCore && window.UniverUi && window.UniverSheets && window.UniverSheetsUi) {
+                status.textContent = 'Modules loaded, initializing...';
+                initUniver();
+            } else if (attempts >= maxAttempts) {
+                status.textContent = 'Failed to load modules';
+                status.style.background = 'red';
+                console.error('Missing modules after 5 seconds');
+            } else {
+                setTimeout(checkAndInit, 100);
+            }
+        }
+
+        function initUniver() {
+            try {
+                const status = document.getElementById('status');
+
+                // Log what we have
+                console.log('UniverCore keys:', Object.keys(window.UniverCore));
+
+                // Try different ways to get Univer constructor
+                let Univer = window.UniverCore.Univer;
+                let UniverInstanceType = window.UniverCore.UniverInstanceType;
+
+                // Fallback attempts
+                if (!Univer && window.UniverCore.default) {
+                    Univer = window.UniverCore.default.Univer;
+                    UniverInstanceType = window.UniverCore.default.UniverInstanceType;
+                }
+
+                if (!Univer) {
+                    // Try to find it in the object
+                    for (const key of Object.keys(window.UniverCore)) {
+                        if (key.includes('Univer') && typeof window.UniverCore[key] === 'function') {
+                            console.log('Found potential Univer constructor:', key);
+                            Univer = window.UniverCore[key];
+                            break;
+                        }
+                    }
+                }
+
+                if (!Univer) {
+                    throw new Error('Cannot find Univer constructor');
+                }
+
+                status.textContent = 'Creating Univer...';
+
+                // Create instance
+                const univer = new Univer({});
+
+                status.textContent = 'Registering plugins...';
+
+                // Get plugins
+                const { UniverUIPlugin } = window.UniverUi;
+                const { UniverSheetsPlugin } = window.UniverSheets;
+                const { UniverSheetsUIPlugin } = window.UniverSheetsUi;
+
+                // Register
+                univer.registerPlugin(UniverUIPlugin, {
+                    container: document.getElementById('app')
+                });
+                univer.registerPlugin(UniverSheetsPlugin);
+                univer.registerPlugin(UniverSheetsUIPlugin);
+
+                status.textContent = 'Creating workbook...';
+
+                // Create workbook
+                const workbook = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+                    id: 'wb',
+                    name: 'Test',
+                    sheets: [{
+                        id: 's1',
+                        name: 'Sheet1',
+                        rowCount: 100,
+                        columnCount: 20,
+                        cellData: {
+                            0: {
+                                0: { v: 'Test' },
+                                1: { v: 'Data' }
+                            }
+                        }
+                    }]
+                });
+
+                status.textContent = '✅ Success!';
+                status.style.background = 'green';
+
+                window.univer = univer;
+                window.workbook = workbook;
+
+                console.log('✅ Univer initialized!');
+
+            } catch (error) {
+                const status = document.getElementById('status');
+                status.textContent = 'Error: ' + error.message;
+                status.style.background = 'red';
+                console.error('Init error:', error);
+            }
+        }
+
+        // Start checking after page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('status').textContent = 'Waiting for modules...';
+            checkAndInit();
+        });
+    </script>
+</body>
+</html>

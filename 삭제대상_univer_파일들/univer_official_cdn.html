@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Univer 공식 CDN 예제 - MSM 견적서</title>
+
+  <!-- 필수 의존성 -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/rxjs@7.8.1/dist/bundles/rxjs.umd.min.js"></script>
+
+  <!-- Univer 프리셋 -->
+  <script src="https://unpkg.com/@univerjs/presets/lib/umd/index.js"></script>
+  <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/index.js"></script>
+  <script src="https://unpkg.com/@univerjs/preset-sheets-core/lib/umd/locales/en-US.js"></script>
+
+  <!-- Univer 스타일 -->
+  <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core/lib/index.css" />
+
+  <!-- 커스텀 스타일 -->
+  <style>
+    html, body, #root, #app {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    .status {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 10px 20px;
+      background: #4CAF50;
+      color: white;
+      border-radius: 5px;
+      z-index: 99999;
+      font-size: 14px;
+    }
+    .status.loading { background: #FFC107; color: #333; }
+    .status.error { background: #F44336; }
+  </style>
+</head>
+<body>
+  <div class="status loading" id="status">Univer 초기화 중...</div>
+  <div id="app"></div>
+
+  <script>
+    console.log('=== Univer 공식 CDN 예제 시작 ===');
+
+    // DOM 로드 완료 대기
+    window.addEventListener('DOMContentLoaded', async function() {
+      const statusEl = document.getElementById('status');
+
+      // 스크립트 로드 대기 (2초)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      try {
+        console.log('전역 객체 확인...');
+        console.log('UniverPresets:', typeof window.UniverPresets);
+        console.log('UniverCore:', typeof window.UniverCore);
+        console.log('UniverPresetSheetsCore:', typeof window.UniverPresetSheetsCore);
+        console.log('UniverPresetSheetsCoreEnUS:', typeof window.UniverPresetSheetsCoreEnUS);
+
+        // 전역 객체가 존재하는지 확인
+        if (!window.UniverPresets) {
+          throw new Error('UniverPresets를 찾을 수 없습니다. CDN 로드를 확인하세요.');
+        }
+
+        if (!window.UniverPresetSheetsCore) {
+          throw new Error('UniverPresetSheetsCore를 찾을 수 없습니다.');
+        }
+
+        // Univer 초기화 (공식 문서 방식)
+        const { createUniver } = window.UniverPresets;
+        const { LocaleType } = window.UniverCore || {};
+        const { UniverSheetsCorePreset } = window.UniverPresetSheetsCore;
+
+        console.log('Univer 인스턴스 생성 중...');
+
+        // Univer 생성
+        const { univerAPI } = createUniver({
+          locale: LocaleType?.EN_US || 'en-US',
+          locales: {
+            'en-US': window.UniverPresetSheetsCoreEnUS || {}
+          },
+          presets: [
+            UniverSheetsCorePreset()
+          ]
+        });
+
+        console.log('✅ Univer API 생성됨:', univerAPI);
+
+        // 워크북에 초기 데이터 설정
+        if (univerAPI) {
+          // 현재 워크북 가져오기
+          const activeWorkbook = univerAPI.getActiveWorkbook();
+          console.log('활성 워크북:', activeWorkbook);
+
+          if (activeWorkbook) {
+            const activeSheet = activeWorkbook.getActiveSheet();
+            console.log('활성 시트:', activeSheet);
+
+            if (activeSheet) {
+              // MSM 견적서 데이터 입력
+              const headers = [
+                ['품목코드', '품목명', '규격', '수량', '단가', '금액', '비고']
+              ];
+
+              const data = [
+                ['MD-001', '수술용 메스', '일회용', 100, 5000, 500000, '긴급'],
+                ['MD-002', '의료용 거즈', '10x10cm', 500, 1000, 500000, ''],
+                ['MD-003', '주사기', '5ml', 200, 3000, 600000, ''],
+                ['MD-004', '수액세트', '표준형', 150, 8000, 1200000, '재고확인'],
+                ['MD-005', '진단키트', 'COVID-19', 50, 15000, 750000, '예약주문']
+              ];
+
+              // 헤더 설정
+              activeSheet.getRange(0, 0, 1, 7).setValues(headers);
+
+              // 데이터 설정
+              activeSheet.getRange(1, 0, data.length, 7).setValues(data);
+
+              // 열 너비 조정
+              for (let i = 0; i < 7; i++) {
+                activeSheet.setColumnWidth(i, i === 1 ? 200 : 100);
+              }
+
+              console.log('✅ 데이터 입력 완료');
+            }
+          }
+
+          // 전역 변수로 저장
+          window.univerAPI = univerAPI;
+
+          statusEl.textContent = '✅ Univer 초기화 성공!';
+          statusEl.className = 'status';
+
+          // 3초 후 상태 메시지 숨기기
+          setTimeout(() => {
+            statusEl.style.display = 'none';
+          }, 3000);
+        }
+
+      } catch (error) {
+        console.error('❌ Univer 초기화 실패:', error);
+        statusEl.textContent = '❌ ' + error.message;
+        statusEl.className = 'status error';
+
+        // 디버깅 정보
+        const univerKeys = Object.keys(window).filter(k =>
+          k.toLowerCase().includes('univer')
+        );
+        console.log('사용 가능한 Univer 키:', univerKeys);
+      }
+
+      // DOM 상태 확인
+      setTimeout(() => {
+        const appEl = document.getElementById('app');
+        console.log('DOM 렌더링 확인:', {
+          자식요소수: appEl.children.length,
+          HTML길이: appEl.innerHTML.length,
+          캔버스: appEl.querySelectorAll('canvas').length,
+          Univer요소: appEl.querySelectorAll('[class*="univer"]').length
+        });
+
+        if (appEl.children.length === 0) {
+          console.warn('⚠️ 아직 DOM이 렌더링되지 않았습니다');
+        }
+      }, 4000);
+    });
+
+    // Flutter 통합
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.action === 'loadExcel') {
+        console.log('Excel 파일 로드 요청:', event.data);
+        // TODO: Excel 파일 로드 구현
+      }
+    });
+  </script>
+</body>
+</html>

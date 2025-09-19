@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer Core Minimal - UniverCore 직접 사용</title>
+
+    <!-- 필수 의존성들을 먼저 로드 -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/rxjs@7.8.1/dist/bundles/rxjs.umd.min.js"></script>
+
+    <!-- RxJS operators 문제 해결 -->
+    <script>
+        // RxJS 전역 설정
+        if (window.rxjs && !window.rxjs.operators) {
+            window.rxjs.operators = {};
+        }
+    </script>
+
+    <!-- Univer UMD 전체 번들 -->
+    <script src="https://unpkg.com/@univerjs/umd@0.5.2/lib/univer.full.umd.js"></script>
+    <script src="https://unpkg.com/@univerjs/umd@0.5.2/lib/locale/en-US.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/umd@0.5.2/lib/univer.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        #app { width: 100%; height: 100%; }
+        .log {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.9);
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            border-radius: 4px;
+            max-width: 500px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 999999;
+        }
+        .log div { margin: 2px 0; }
+        .error { color: #f00; }
+        .warn { color: #ff0; }
+        .success { color: #0f0; }
+    </style>
+</head>
+<body>
+    <div class="log" id="log">
+        <div>Univer Core Minimal Loading...</div>
+    </div>
+    <div id="app"></div>
+
+    <script>
+        const logEl = document.getElementById('log');
+        const log = (msg, type = '') => {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logEl.appendChild(div);
+            console.log(msg);
+        };
+
+        async function initUniver() {
+            log('Initializing Univer Core...');
+
+            // 스크립트 로드 대기
+            await new Promise(r => setTimeout(r, 2000));
+
+            try {
+                // 전역 객체 확인
+                log('Checking global objects...');
+                const globals = {
+                    UniverCore: !!window.UniverCore,
+                    UniverDesign: !!window.UniverDesign,
+                    UniverEngineRender: !!window.UniverEngineRender,
+                    UniverEngineFormula: !!window.UniverEngineFormula,
+                    UniverSheets: !!window.UniverSheets,
+                    UniverSheetsUi: !!window.UniverSheetsUi,
+                    UniverUi: !!window.UniverUi,
+                    UniverDocs: !!window.UniverDocs,
+                    UniverDocsUi: !!window.UniverDocsUi,
+                    UniverFacade: !!window.UniverFacade
+                };
+
+                Object.entries(globals).forEach(([key, exists]) => {
+                    log(`${key}: ${exists ? '✓' : '✗'}`, exists ? 'success' : 'error');
+                });
+
+                if (!window.UniverCore) {
+                    throw new Error('UniverCore not found!');
+                }
+
+                log('Creating Univer instance...', 'warn');
+
+                // Univer 인스턴스 생성 (공식 문서 방식)
+                const univer = new window.UniverCore.Univer({
+                    theme: window.UniverDesign?.defaultTheme || {},
+                    locale: window.UniverCore.LocaleType?.EN_US || 'en-US',
+                    locales: {
+                        'en-US': window.UniverUMD?.['en-US'] || {}
+                    }
+                });
+
+                log('Registering plugins...', 'warn');
+
+                // 필수 플러그인 등록
+                if (window.UniverEngineRender?.UniverRenderEnginePlugin) {
+                    univer.registerPlugin(window.UniverEngineRender.UniverRenderEnginePlugin);
+                    log('✓ Render Engine registered', 'success');
+                }
+
+                if (window.UniverEngineFormula?.UniverFormulaEnginePlugin) {
+                    univer.registerPlugin(window.UniverEngineFormula.UniverFormulaEnginePlugin);
+                    log('✓ Formula Engine registered', 'success');
+                }
+
+                if (window.UniverUi?.UniverUIPlugin) {
+                    univer.registerPlugin(window.UniverUi.UniverUIPlugin, {
+                        container: document.getElementById('app')
+                    });
+                    log('✓ UI Plugin registered', 'success');
+                }
+
+                if (window.UniverSheets?.UniverSheetsPlugin) {
+                    univer.registerPlugin(window.UniverSheets.UniverSheetsPlugin);
+                    log('✓ Sheets Plugin registered', 'success');
+                }
+
+                if (window.UniverSheetsUi?.UniverSheetsUIPlugin) {
+                    univer.registerPlugin(window.UniverSheetsUi.UniverSheetsUIPlugin);
+                    log('✓ Sheets UI registered', 'success');
+                }
+
+                if (window.UniverSheetsFormula?.UniverSheetsFormulaPlugin) {
+                    univer.registerPlugin(window.UniverSheetsFormula.UniverSheetsFormulaPlugin);
+                    log('✓ Sheets Formula registered', 'success');
+                }
+
+                log('Creating workbook...', 'warn');
+
+                // 워크북 생성
+                const workbook = univer.createUnit(window.UniverCore.UniverInstanceType.UNIVER_SHEET, {
+                    id: 'msm-workbook',
+                    name: 'MSM 견적서',
+                    appVersion: '0.5.2',
+                    sheets: {
+                        'sheet1': {
+                            id: 'sheet1',
+                            name: '견적서',
+                            rowCount: 100,
+                            columnCount: 20,
+                            rowData: {
+                                0: { h: 30 },  // 헤더 행 높이
+                                1: { h: 25 }
+                            },
+                            columnData: {
+                                0: { w: 100 },
+                                1: { w: 200 },
+                                2: { w: 100 },
+                                3: { w: 80 },
+                                4: { w: 100 },
+                                5: { w: 120 },
+                                6: { w: 150 }
+                            },
+                            cellData: {
+                                0: {  // 첫 번째 행 (헤더)
+                                    0: { v: '품목코드' },
+                                    1: { v: '품목명' },
+                                    2: { v: '규격' },
+                                    3: { v: '수량' },
+                                    4: { v: '단가' },
+                                    5: { v: '금액' },
+                                    6: { v: '비고' }
+                                },
+                                1: {  // 두 번째 행 (데이터)
+                                    0: { v: 'MD-001' },
+                                    1: { v: '수술용 메스' },
+                                    2: { v: '일회용' },
+                                    3: { v: 100 },
+                                    4: { v: 5000 },
+                                    5: { v: 500000 },
+                                    6: { v: '긴급' }
+                                },
+                                2: {
+                                    0: { v: 'MD-002' },
+                                    1: { v: '의료용 거즈' },
+                                    2: { v: '10x10cm' },
+                                    3: { v: 500 },
+                                    4: { v: 1000 },
+                                    5: { v: 500000 },
+                                    6: { v: '' }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                log('✓ Workbook created!', 'success');
+                log(`Workbook ID: ${workbook.getUnitId()}`, 'success');
+
+                // 전역 저장
+                window.univer = univer;
+                window.workbook = workbook;
+
+                // DOM 체크
+                setTimeout(() => {
+                    const appEl = document.getElementById('app');
+                    const stats = {
+                        children: appEl.children.length,
+                        html: appEl.innerHTML.length > 0,
+                        canvas: appEl.querySelectorAll('canvas').length,
+                        univerElements: appEl.querySelectorAll('[class*="univer"]').length
+                    };
+
+                    log('=== DOM Check ===', 'warn');
+                    log(`Children: ${stats.children}`, stats.children > 0 ? 'success' : 'error');
+                    log(`HTML Content: ${stats.html}`, stats.html ? 'success' : 'error');
+                    log(`Canvas Elements: ${stats.canvas}`, stats.canvas > 0 ? 'success' : 'error');
+                    log(`Univer Elements: ${stats.univerElements}`, stats.univerElements > 0 ? 'success' : 'error');
+
+                    if (stats.children === 0) {
+                        log('⚠️ NO RENDERING DETECTED!', 'error');
+                    } else {
+                        log('✅ RENDERING SUCCESS!', 'success');
+                    }
+                }, 3000);
+
+            } catch (error) {
+                log(`ERROR: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // 페이지 로드 후 실행
+        window.addEventListener('DOMContentLoaded', initUniver);
+    </script>
+</body>
+</html>

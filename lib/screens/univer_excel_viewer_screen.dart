@@ -40,7 +40,7 @@ class _UniverExcelViewerScreenState extends State<UniverExcelViewerScreen> {
       _iframeId,
       (int viewId) {
         final iframe = html.IFrameElement()
-          ..src = 'http://localhost:50580/univer_working_simple.html'
+          ..src = 'x_spreadsheet.html'  // 또는 'handsontable.html'
           ..style.border = 'none'
           ..style.width = '100%'
           ..style.height = '100%'
@@ -107,13 +107,13 @@ class _UniverExcelViewerScreenState extends State<UniverExcelViewerScreen> {
           },
         ),
       )
-      ..loadRequest(Uri.parse('http://localhost:50580/univer_working_simple.html'));
+      ..loadRequest(Uri.parse('http://localhost:58000/x_spreadsheet.html'));
   }
 
   void _handleWebViewMessage(String message) {
     debugPrint('📨 WebView 메시지: $message');
 
-    if (message == 'univer_ready') {
+    if (message == 'xspreadsheet_ready') {
       setState(() {
         _isReady = true;
         _status = '준비 완료';

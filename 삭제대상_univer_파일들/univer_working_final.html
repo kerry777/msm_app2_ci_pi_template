@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univer 최종 작동 버전</title>
+
+    <!-- 단순 프리셋 모드 사용 (한 개의 스크립트) -->
+    <script src="https://unpkg.com/@univerjs/presets@0.5.2/lib/umd/preset-sheets-en-US.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/presets@0.5.2/lib/styles/preset-sheets-en-US.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100vh; overflow: hidden; }
+        #container { width: 100vw; height: 100vh; }
+        .status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 5px;
+            z-index: 999999;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Loading...</div>
+    <div id="container"></div>
+
+    <script>
+        const status = document.getElementById('status');
+
+        function updateStatus(msg) {
+            status.textContent = msg;
+            console.log(msg);
+        }
+
+        // 페이지 로드 완료 후 실행
+        window.addEventListener('DOMContentLoaded', async function() {
+            updateStatus('DOM loaded, waiting for scripts...');
+
+            // 스크립트 로드 대기
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            updateStatus('Checking for Univer globals...');
+
+            // 전역 객체 확인
+            const univerKeys = Object.keys(window).filter(k =>
+                k.toLowerCase().includes('univer') ||
+                k === 'UniverSheetsPresetEnUS' ||
+                k === 'UniverPreset'
+            );
+
+            console.log('Found keys:', univerKeys);
+
+            try {
+                // 다양한 전역 이름 시도
+                if (window.UniverSheetsPresetEnUS) {
+                    updateStatus('Found UniverSheetsPresetEnUS, initializing...');
+
+                    // 프리셋 함수 호출
+                    const result = window.UniverSheetsPresetEnUS({
+                        container: 'container'
+                    });
+
+                    updateStatus('✅ Univer initialized successfully!');
+                    console.log('Result:', result);
+
+                    // univerAPI 사용
+                    if (result && result.univerAPI) {
+                        const { univerAPI } = result;
+
+                        // 워크북이 이미 있는지 확인
+                        const workbook = univerAPI.getActiveWorkbook();
+                        if (workbook) {
+                            const sheet = workbook.getActiveSheet();
+                            if (sheet) {
+                                // MSM 데이터 입력
+                                sheet.getRange(0, 0, 1, 7).setValues([
+                                    ['품목코드', '품목명', '규격', '수량', '단가', '금액', '비고']
+                                ]);
+
+                                sheet.getRange(1, 0, 5, 7).setValues([
+                                    ['MD-001', '수술용 메스', '일회용', 100, 5000, 500000, '긴급'],
+                                    ['MD-002', '의료용 거즈', '10x10cm', 500, 1000, 500000, ''],
+                                    ['MD-003', '주사기', '5ml', 200, 3000, 600000, ''],
+                                    ['MD-004', '수액세트', '표준형', 150, 8000, 1200000, '재고확인'],
+                                    ['MD-005', '진단키트', 'COVID-19', 50, 15000, 750000, '예약주문']
+                                ]);
+
+                                updateStatus('✅ Data loaded!');
+                            }
+                        } else {
+                            // 새 워크북 생성
+                            univerAPI.createWorkbook({
+                                name: 'MSM 견적서'
+                            });
+                        }
+
+                        window.univerAPI = univerAPI;
+                    }
+
+                } else if (window.UniverPreset) {
+                    updateStatus('Found UniverPreset, trying...');
+
+                    const result = window.UniverPreset({
+                        container: 'container'
+                    });
+
+                    updateStatus('✅ UniverPreset initialized!');
+
+                } else {
+                    updateStatus('❌ No Univer global found');
+                    console.error('Available globals:', univerKeys);
+
+                    // 디버깅을 위해 전체 window 객체 확인
+                    console.log('All window keys with "univ":',
+                        Object.keys(window).filter(k => k.toLowerCase().includes('univ'))
+                    );
+                }
+
+                // DOM 확인
+                setTimeout(() => {
+                    const container = document.getElementById('container');
+                    const hasContent = container.children.length > 0;
+                    const hasCanvas = container.querySelectorAll('canvas').length > 0;
+
+                    if (hasContent || hasCanvas) {
+                        updateStatus('✅ RENDERING SUCCESS!');
+                    } else {
+                        updateStatus('⚠️ No rendering detected');
+                        console.log('Container HTML:', container.innerHTML.substring(0, 100));
+                    }
+                }, 2000);
+
+            } catch (error) {
+                updateStatus('❌ Error: ' + error.message);
+                console.error(error);
+            }
+        });
+
+        // Flutter 통합
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.action === 'loadExcel') {
+                updateStatus('Excel load request received');
+                // Excel 로드 구현
+            }
+        });
+    </script>
+</body>
+</html>
