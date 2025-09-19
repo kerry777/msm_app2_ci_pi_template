@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSM Excel - Univer 최신 버전 테스트</title>
+
+    <!-- Univer 최신 버전 CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/umd/lib/univer.css">
+
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { padding: 20px; border-bottom: 1px solid #eee; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; }
+        .content { padding: 20px; }
+        .buttons { margin-bottom: 20px; }
+        .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-primary:hover { background: #0056b3; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; background: #f8f9fa; border-left: 4px solid #007bff; }
+        #univer { width: 100%; height: 600px; border: 1px solid #ddd; border-radius: 4px; }
+        .info { background: #e7f3ff; padding: 15px; border-radius: 4px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 MSM Excel - Univer 최신 버전 테스트</h1>
+            <p>Excel Import API 지원 여부 확인</p>
+        </div>
+
+        <div class="content">
+            <div class="info">
+                <h3>🔍 테스트 목적</h3>
+                <p>• Univer 최신 버전에서 <code>importXLSXToSnapshot</code> API 지원 확인</p>
+                <p>• Excel 파일을 "있는 그대로" 임포트하는 기능 테스트</p>
+                <p>• 서식 보존 Excel 로딩 검증</p>
+            </div>
+
+            <div class="buttons">
+                <button class="btn btn-primary" onclick="testExcelImport()">📊 Excel Import API 테스트</button>
+                <button class="btn btn-primary" onclick="loadSampleExcel()">📋 샘플 Excel 로딩</button>
+            </div>
+
+            <div class="status" id="status">🌐 페이지 로드 완료, 초기화 대기 중...</div>
+
+            <div id="univer"></div>
+        </div>
+    </div>
+
+    <!-- Univer 최신 버전 JS -->
+    <script src="https://unpkg.com/@univerjs/umd/lib/univer.full.umd.js"></script>
+
+    <script>
+        let univerAPI;
+        let workbook;
+
+        function setStatus(message) {
+            document.getElementById('status').innerHTML = message;
+            console.log(message);
+        }
+
+        async function initUniver() {
+            try {
+                setStatus('🚀 Univer 최신 버전 초기화 중...');
+
+                const { createUniver } = window.univer;
+
+                const { univerAPI: api } = createUniver({
+                    locale: 'en-US',
+                    container: 'univer'
+                });
+
+                univerAPI = api;
+                workbook = univerAPI.createWorkbook({ name: 'MSM Test' });
+
+                // 🔍 API 지원 여부 확인
+                console.log('🔍 Univer 최신 버전 API 확인:');
+                console.log('- importXLSXToSnapshot:', typeof univerAPI.importXLSXToSnapshot);
+                console.log('- importXLSXToUnitId:', typeof univerAPI.importXLSXToUnitId);
+                console.log('- createWorkbook:', typeof univerAPI.createWorkbook);
+
+                if (univerAPI.importXLSXToSnapshot) {
+                    setStatus('🎉 성공! Excel Import API 지원됨 - 업그레이드 완료');
+                    console.log('✅ Excel Import API 사용 가능!');
+                } else {
+                    setStatus('⚠️ 여전히 Excel Import API 미지원 - 추가 설정 필요');
+                    console.log('❌ Excel Import API 여전히 없음');
+                }
+
+            } catch (error) {
+                console.error('❌ 초기화 실패:', error);
+                setStatus(`❌ 초기화 실패: ${error.message}`);
+            }
+        }
+
+        async function testExcelImport() {
+            if (!univerAPI) {
+                setStatus('❌ Univer가 초기화되지 않았습니다');
+                return;
+            }
+
+            if (univerAPI.importXLSXToSnapshot) {
+                setStatus('✅ Excel Import API 테스트 시작...');
+
+                try {
+                    // 샘플 Excel 파일 로딩 테스트
+                    const response = await fetch('../MEK_SALES_TEMPLATE_QT_KR.xlsx');
+                    const arrayBuffer = await response.arrayBuffer();
+                    const file = new File([arrayBuffer], 'test.xlsx', {
+                        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    });
+
+                    const snapshot = await univerAPI.importXLSXToSnapshot(file);
+                    console.log('🎉 Excel 임포트 성공:', snapshot);
+                    setStatus('🎉 Excel Import API 테스트 성공! 서식 보존됨');
+
+                } catch (error) {
+                    console.error('❌ Excel 임포트 실패:', error);
+                    setStatus(`❌ Excel 임포트 실패: ${error.message}`);
+                }
+            } else {
+                setStatus('❌ Excel Import API가 없습니다');
+            }
+        }
+
+        async function loadSampleExcel() {
+            setStatus('📋 샘플 Excel 로딩 기능은 Excel Import API가 필요합니다');
+        }
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            setTimeout(initUniver, 1000);
+        });
+    </script>
+</body>
+</html>

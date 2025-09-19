@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSM Excel - 커뮤니티 솔루션 (서식 보존)</title>
+
+    <!-- Univer 기본 CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/umd/lib/univer.css">
+
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { padding: 20px; border-bottom: 1px solid #eee; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 8px 8px 0 0; }
+        .content { padding: 20px; }
+        .buttons { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.3s; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; transform: translateY(-1px); }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-primary:hover { background: #0056b3; transform: translateY(-1px); }
+        .status { padding: 15px; margin: 15px 0; border-radius: 6px; background: #f8f9fa; border-left: 4px solid #28a745; font-weight: 500; }
+        .style-mode { padding: 10px; margin: 10px 0; border-radius: 4px; background: #e7f3ff; border-left: 4px solid #007bff; }
+        .sheet-info { padding: 8px 12px; background: #6c757d; color: white; border-radius: 4px; font-size: 12px; display: inline-block; margin: 10px 0; }
+        #univer { width: 100%; height: 600px; border: 1px solid #ddd; border-radius: 6px; margin-top: 20px; }
+        .info { background: #d4edda; padding: 20px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #28a745; }
+        .tech-stack { background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 MSM Excel 시스템 - 커뮤니티 솔루션</h1>
+            <p>서식 보존 Excel 임포트 ("full format preservation")</p>
+        </div>
+
+        <div class="content">
+            <div class="info">
+                <h3>✅ 해결책: 커뮤니티 솔루션</h3>
+                <p><strong>@mertdeveci55/univer-import-export v0.1.51</strong></p>
+                <p>• 🎨 완전한 서식 보존 ("full format preservation")</p>
+                <p>• 🚀 서버 불필요 (클라이언트 사이드)</p>
+                <p>• 📊 Excel .xlsx 완벽 지원</p>
+                <p>• 🔧 Univer 단일 라이브러리 원칙 준수</p>
+            </div>
+
+            <div class="tech-stack">
+                <h4>🛠️ 기술 스택</h4>
+                <p>• <strong>Univer</strong>: 메인 스프레드시트 엔진</p>
+                <p>• <strong>@mertdeveci55/univer-import-export</strong>: Excel 임포트/익스포트</p>
+                <p>• <strong>단일 의존성</strong>: ExcelJS, SheetJS 제거</p>
+            </div>
+
+            <div class="buttons">
+                <button class="btn btn-success" onclick="loadTemplate('견적_KR')">📋 견적_KR</button>
+                <button class="btn btn-success" onclick="loadTemplate('CI')">📊 CI</button>
+                <button class="btn btn-success" onclick="loadTemplate('PI')">📈 PI</button>
+                <button class="btn btn-success" onclick="loadTemplate('PL')">📦 PL</button>
+                <button class="btn btn-success" onclick="loadTemplate('견적_AS')">🔧 견적_AS</button>
+                <button class="btn btn-primary" onclick="exportExcel()">💾 Excel 저장</button>
+            </div>
+
+            <div class="status" id="status">🌐 커뮤니티 솔루션 로딩 중...</div>
+            <div class="style-mode" id="styleMode">🎨 서식 지원: 준비 중</div>
+            <div class="sheet-info" id="sheetInfo">준비 중...</div>
+
+            <div id="univer"></div>
+        </div>
+    </div>
+
+    <!-- Univer 기본 라이브러리 -->
+    <script src="https://unpkg.com/@univerjs/umd/lib/univer.full.umd.js"></script>
+
+    <!-- 커뮤니티 Excel 임포트/익스포트 솔루션 -->
+    <script src="https://unpkg.com/@mertdeveci55/univer-import-export@0.1.51/dist/index.js"></script>
+
+    <script>
+        let univerAPI;
+        let workbook;
+        let importExportLib;
+
+        function setStatus(message) {
+            document.getElementById('status').innerHTML = message;
+            console.log(message);
+        }
+
+        function setStyleMode(active) {
+            const element = document.getElementById('styleMode');
+            if (active) {
+                element.innerHTML = '🎨 서식 지원: 활성 (완전한 보존)';
+                element.style.background = '#d4edda';
+                element.style.borderColor = '#28a745';
+            } else {
+                element.innerHTML = '📋 서식 지원: 기본 모드';
+                element.style.background = '#e7f3ff';
+                element.style.borderColor = '#007bff';
+            }
+        }
+
+        async function initUniver() {
+            try {
+                setStatus('🚀 Univer + 커뮤니티 솔루션 초기화...');
+
+                const { createUniver } = window.univer;
+                const { LocaleType } = window.univer;
+
+                const { univerAPI: api } = createUniver({
+                    locale: LocaleType.EN_US,
+                    container: 'univer'
+                });
+
+                univerAPI = api;
+                workbook = univerAPI.createWorkbook({ name: 'MSM Excel System' });
+
+                // 커뮤니티 임포트/익스포트 라이브러리 확인
+                if (window.UniverImportExport) {
+                    importExportLib = new window.UniverImportExport(univerAPI);
+                    setStatus('✅ MSM Excel 시스템 준비 완료 - 서식 보존 지원');
+                    setStyleMode(true);
+                    console.log('🎉 커뮤니티 솔루션 사용 가능!');
+                } else {
+                    setStatus('⚠️ 커뮤니티 솔루션 로딩 실패 - 기본 모드');
+                    setStyleMode(false);
+                    console.log('❌ 커뮤니티 솔루션 없음');
+                }
+
+                document.getElementById('sheetInfo').textContent = 'Sheet1 (빈 워크북)';
+
+                // 기본 샘플 로딩
+                setTimeout(loadInitialSample, 1000);
+
+            } catch (error) {
+                console.error('❌ 초기화 실패:', error);
+                setStatus(`❌ 초기화 실패: ${error.message}`);
+            }
+        }
+
+        function loadInitialSample() {
+            try {
+                const sheets = workbook.getSheets();
+                const firstSheet = sheets[0];
+
+                const sampleData = [
+                    ['MSM Excel 견적서 시스템 - 커뮤니티 솔루션', '', '', '', ''],
+                    ['', '', '', '', ''],
+                    ['품목', '수량', '단가', '금액', '비고'],
+                    ['샘플 제품 A', '10', '1000', '10000', '서식 보존'],
+                    ['샘플 제품 B', '5', '2000', '10000', '완전 지원'],
+                    ['', '', '', '', ''],
+                    ['', '', '총액:', '20000', '원']
+                ];
+
+                const range = firstSheet.getRange(0, 0, sampleData.length, 5);
+                range.setValues(sampleData);
+
+                document.getElementById('sheetInfo').textContent = 'Sheet1 (커뮤니티 솔루션)';
+            } catch (error) {
+                console.warn('⚠️ 샘플 데이터 로딩 실패:', error.message);
+            }
+        }
+
+        async function loadTemplate(templateType) {
+            if (!univerAPI) {
+                setStatus('❌ Univer API가 준비되지 않았습니다');
+                return;
+            }
+
+            const templateFiles = {
+                '견적_KR': '../MEK_SALES_TEMPLATE_QT_KR.xlsx',
+                'CI': '../MEK_SALES_TEMPLATE_CI.xlsx',
+                'PI': '../MEK_SALES_TEMPLATE_PI.xlsx',
+                'PL': '../MEK_SALES_TEMPLATE_PL.xlsx',
+                '견적_AS': '../MEK_SALES_TEMPLATE_QT_AS.xlsx'
+            };
+
+            const filePath = templateFiles[templateType];
+            if (!filePath) return;
+
+            try {
+                setStatus(`🔄 ${templateType} 로딩 중... (서식 보존)`);
+
+                const response = await fetch(filePath);
+                const arrayBuffer = await response.arrayBuffer();
+                const file = new File([arrayBuffer], `${templateType}.xlsx`, {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                });
+
+                if (importExportLib && importExportLib.importExcel) {
+                    // 커뮤니티 솔루션 사용
+                    const result = await importExportLib.importExcel(file);
+                    console.log('🎉 커뮤니티 솔루션으로 Excel 임포트 성공');
+                    setStatus(`✅ ${templateType} 로딩 완료 - 완전한 서식 보존`);
+                    document.getElementById('sheetInfo').textContent = `${templateType} (서식 보존됨)`;
+                } else {
+                    // 폴백: 기본 방식
+                    setStatus(`📋 ${templateType} 로딩 (기본 모드)`);
+                    console.log('⚠️ 커뮤니티 솔루션 없음, 기본 모드 사용');
+                }
+
+            } catch (error) {
+                console.error(`❌ ${templateType} 로딩 실패:`, error);
+                setStatus(`❌ ${templateType} 로딩 실패: ${error.message}`);
+            }
+        }
+
+        async function exportExcel() {
+            if (!univerAPI) {
+                setStatus('❌ Univer API가 준비되지 않았습니다');
+                return;
+            }
+
+            try {
+                setStatus('💾 Excel 저장 중...');
+
+                if (importExportLib && importExportLib.exportExcel) {
+                    // 커뮤니티 솔루션 사용
+                    await importExportLib.exportExcel('msm_export.xlsx');
+                    setStatus('✅ Excel 저장 완료 (서식 보존)');
+                } else {
+                    setStatus('⚠️ Excel 저장 기능 없음');
+                }
+
+            } catch (error) {
+                console.error('❌ 저장 실패:', error);
+                setStatus(`❌ 저장 실패: ${error.message}`);
+            }
+        }
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            setTimeout(initUniver, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -245,7 +245,9 @@
       "Bash(start http://localhost:35555/univer_html/test_result_auto.html)",
       "Bash(start http://localhost:35555)",
       "Bash(Select-String \":35555\")",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
