@@ -247,7 +247,12 @@
       "Bash(Select-String \":35555\")",
       "Bash(git log:*)",
       "Bash(git remote add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(start http://localhost:35555/assets/univer/msm_excel_final_solution.html)",
+      "Bash(start http://localhost:35555/assets/univer/msm_excel_community_solution.html)",
+      "Bash(start http://localhost:35555/assets/univer/univer_latest_test.html)",
+      "Bash(start http://localhost:35555/assets/univer/msm_excel_pro_version.html)",
+      "WebFetch(domain:reference.univer.ai)"
     ],
     "deny": []
   }

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MSM Excel - 커뮤니티 솔루션 (서식 보존)</title>
 
-    <!-- Univer 기본 CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/@univerjs/umd/lib/univer.css">
+    <!-- Univer 0.10.8 CSS (작업 버전과 동일) -->
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/preset-sheets-core@0.10.8/lib/umd/index.css">
 
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
@@ -68,11 +68,31 @@
         </div>
     </div>
 
-    <!-- Univer 기본 라이브러리 -->
-    <script src="https://unpkg.com/@univerjs/umd/lib/univer.full.umd.js"></script>
+    <!-- Univer 최신 버전 (프로 기능 포함) -->
+    <script src="https://unpkg.com/@univerjs/core@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/engine-render@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/engine-formula@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-ui@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/sheets-formula@latest/lib/umd/index.js"></script>
+    <script src="https://unpkg.com/@univerjs/facade@latest/lib/umd/index.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@univerjs/sheets-ui@latest/lib/index.css">
 
-    <!-- 커뮤니티 Excel 임포트/익스포트 솔루션 -->
-    <script src="https://unpkg.com/@mertdeveci55/univer-import-export@0.1.51/dist/index.js"></script>
+    <!-- XLSX 라이브러리 (폴백용) -->
+    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- Excel Import/Export 시도 (프로 기능) -->
+    <script>
+        // 프로 기능 시도
+        const tryProFeatures = () => {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/@univerjs-pro/exchange-client@latest/lib/umd/index.js';
+            script.onload = () => console.log('✅ 프로 기능 로드됨');
+            script.onerror = () => console.log('❌ 프로 기능 로드 실패');
+            document.head.appendChild(script);
+        };
+        tryProFeatures();
+    </script>
 
     <script>
         let univerAPI;
@@ -99,30 +119,52 @@
 
         async function initUniver() {
             try {
-                setStatus('🚀 Univer + 커뮤니티 솔루션 초기화...');
+                setStatus('🚀 Univer 최신 버전 + Excel Import 초기화...');
 
-                const { createUniver } = window.univer;
-                const { LocaleType } = window.univer;
+                // 최신 Univer 구조로 초기화
+                const { Univer, LocaleType } = UniverCore;
+                const { defaultTheme } = UniverDesign;
+                const { UniverRenderEnginePlugin } = UniverEngineRender;
+                const { UniverFormulaEnginePlugin } = UniverEngineFormula;
+                const { UniverSheetsPlugin } = UniverSheets;
+                const { UniverSheetsUIPlugin } = UniverSheetsUI;
+                const { UniverSheetsFormulaPlugin } = UniverSheetsFormula;
+                const { FUniver } = UniverFacade;
 
-                const { univerAPI: api } = createUniver({
+                const univer = new Univer({
+                    theme: defaultTheme,
                     locale: LocaleType.EN_US,
-                    container: 'univer'
                 });
 
-                univerAPI = api;
+                univer.registerPlugin(UniverRenderEnginePlugin);
+                univer.registerPlugin(UniverFormulaEnginePlugin);
+                univer.registerPlugin(UniverSheetsPlugin);
+                univer.registerPlugin(UniverSheetsUIPlugin);
+                univer.registerPlugin(UniverSheetsFormulaPlugin);
+
+                // Facade API 초기화
+                const univerAPI = FUniver.newAPI(univer);
+
+                // 워크북 생성
                 workbook = univerAPI.createWorkbook({ name: 'MSM Excel System' });
 
-                // 커뮤니티 임포트/익스포트 라이브러리 확인
-                if (window.UniverImportExport) {
-                    importExportLib = new window.UniverImportExport(univerAPI);
-                    setStatus('✅ MSM Excel 시스템 준비 완료 - 서식 보존 지원');
+                // Excel Import API 확인
+                console.log('🔍 Univer API 기능 확인:');
+                console.log('- importXLSXToSnapshot:', typeof univerAPI.importXLSXToSnapshot);
+                console.log('- importXLSXToUnitId:', typeof univerAPI.importXLSXToUnitId);
+
+                if (univerAPI.importXLSXToSnapshot) {
+                    setStatus('✅ Univer Excel Import API 지원됨! - 서식 보존 가능');
                     setStyleMode(true);
-                    console.log('🎉 커뮤니티 솔루션 사용 가능!');
+                    console.log('🎉 Excel Import API 사용 가능!');
                 } else {
-                    setStatus('⚠️ 커뮤니티 솔루션 로딩 실패 - 기본 모드');
+                    setStatus('⚠️ Excel Import API 미지원 - 프로 패키지 필요');
                     setStyleMode(false);
-                    console.log('❌ 커뮤니티 솔루션 없음');
+                    console.log('❌ Excel Import API 없음');
                 }
+
+                // 스프레드시트 렌더링
+                univerAPI.render('univer');
 
                 document.getElementById('sheetInfo').textContent = 'Sheet1 (빈 워크북)';
 
@@ -185,16 +227,52 @@
                     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 });
 
-                if (importExportLib && importExportLib.importExcel) {
-                    // 커뮤니티 솔루션 사용
-                    const result = await importExportLib.importExcel(file);
-                    console.log('🎉 커뮤니티 솔루션으로 Excel 임포트 성공');
-                    setStatus(`✅ ${templateType} 로딩 완료 - 완전한 서식 보존`);
-                    document.getElementById('sheetInfo').textContent = `${templateType} (서식 보존됨)`;
+                // Univer 내장 Excel Import API 시도
+                if (univerAPI && univerAPI.importXLSXToSnapshot) {
+                    try {
+                        setStatus(`🎉 Univer Excel Import API로 ${templateType} 임포트 중...`);
+
+                        const snapshot = await univerAPI.importXLSXToSnapshot(file);
+                        console.log('🎉 Univer Excel Import 성공:', snapshot);
+
+                        // 새 워크북으로 스냅샷 로드
+                        const newWorkbook = univerAPI.createWorkbook(snapshot);
+                        setStatus(`✅ ${templateType} 로딩 완료 - 완전한 서식 보존 (Univer)`);
+                        document.getElementById('sheetInfo').textContent = `${templateType} (서식 보존됨)`;
+
+                    } catch (importError) {
+                        console.error('❌ Univer Excel Import 실패:', importError);
+                        setStatus(`❌ Univer Excel Import 실패: ${importError.message}`);
+
+                        // 폴백: 기본 로딩
+                        await basicExcelLoad();
+                    }
                 } else {
-                    // 폴백: 기본 방식
-                    setStatus(`📋 ${templateType} 로딩 (기본 모드)`);
-                    console.log('⚠️ 커뮤니티 솔루션 없음, 기본 모드 사용');
+                    console.log('⚠️ Univer Excel Import API 없음, 기본 모드 사용');
+                    await basicExcelLoad();
+                }
+
+                // 기본 Excel 로딩 함수
+                async function basicExcelLoad() {
+                    // XLSX 라이브러리 사용 (값만)
+                    if (typeof XLSX !== 'undefined') {
+                        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                        if (data.length > 0) {
+                            const activeWorkbook = univerAPI.getActiveWorkbook();
+                            const activeSheet = activeWorkbook.getActiveSheet();
+                            activeSheet.getRange(0, 0, 1000, 100).clear();
+                            const dataRange = activeSheet.getRange(0, 0, data.length, Math.max(...data.map(row => row.length)));
+                            dataRange.setValues(data);
+                        }
+
+                        setStatus(`📋 ${templateType} 로딩 완료 (값만, 서식 없음)`);
+                        document.getElementById('sheetInfo').textContent = `${templateType} (기본 모드)`;
+                    } else {
+                        setStatus(`❌ Excel 로딩 실패: XLSX 라이브러리 없음`);
+                    }
                 }
 
             } catch (error) {
