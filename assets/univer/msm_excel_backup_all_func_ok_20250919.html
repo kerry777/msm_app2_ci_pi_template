@@ -453,8 +453,29 @@ MSM COMPLETE SYSTEM - 최종 완성 버전 백업 (2025-09-19)
         console.log(`🌐 전체 URL: ${fullURL}`);
 
         try {
-          const response = await fetch(filePath);
-          console.log(`📡 HTTP 응답:`, response.status, response.statusText);
+          // 강력한 캐시 방지를 위한 타임스탬프 추가
+          const timestamp = new Date().getTime();
+          const randomId = Math.random().toString(36).substring(7);
+          const cacheBypassUrl = `${filePath}?_t=${timestamp}&_r=${randomId}`;
+
+          console.log(`🔄 실시간 파일 로드 시도: ${cacheBypassUrl}`);
+
+          const response = await fetch(cacheBypassUrl, {
+            method: 'GET',
+            cache: 'no-store',  // 더 강력한 캐시 비활성화
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate, proxy-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0',
+              'If-Modified-Since': 'Mon, 26 Jul 1997 05:00:00 GMT',
+              'Last-Modified': new Date().toUTCString()
+            }
+          });
+
+          const lastModified = response.headers.get('Last-Modified');
+          console.log(`📡 HTTP 응답 (실시간):`, response.status, response.statusText);
+          console.log(`📅 파일 최종 수정일: ${lastModified}`);
+          console.log(`🕐 요청 시간: ${new Date().toISOString()}`);
 
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText} - 파일 경로: ${filePath}`);
@@ -464,59 +485,70 @@ MSM COMPLETE SYSTEM - 최종 완성 버전 백업 (2025-09-19)
           const workbook = XLSX.read(arrayBuffer, { type: 'array' });
 
           if (univerAPI && workbook.SheetNames.length > 0) {
-            // 기존 워크북 삭제
-            try {
-              const currentWorkbook = univerAPI.getActiveWorkbook();
-              if (currentWorkbook) {
-                univerAPI.disposeWorkbook(currentWorkbook.getUnitId());
-                console.log('🗑️ 기존 워크북 삭제됨');
+            // 기존 워크북 유지하면서 시트 업데이트
+            const activeWorkbook = univerAPI.getActiveWorkbook();
+
+            // 기존 추가 시트들 정리 (첫 번째 시트는 유지)
+            const existingSheets = activeWorkbook.getSheets();
+            const existingSheetNames = [];
+
+            // 첫 번째 시트 외의 기존 시트들을 기록
+            existingSheets.forEach((sheet, index) => {
+              if (index > 0) {
+                try {
+                  const sheetName = sheet.getName();
+                  existingSheetNames.push(sheetName);
+                } catch (error) {
+                  console.warn('⚠️ 시트 이름 가져오기 실패:', error.message);
+                }
               }
-            } catch (error) {
-              console.warn('⚠️ 기존 워크북 삭제 실패:', error.message);
+            });
+
+            // 첫 번째 시트는 기존 시트 업데이트
+            const firstSheetName = workbook.SheetNames[0];
+            const firstWorksheet = workbook.Sheets[firstSheetName];
+            const firstData = XLSX.utils.sheet_to_json(firstWorksheet, { header: 1 });
+
+            if (firstData.length > 0) {
+              const activeSheet = activeWorkbook.getActiveSheet();
+              // 기존 데이터 삭제
+              const clearRange = activeSheet.getRange(0, 0, 1000, 100);
+              clearRange.clear();
+              // 새 데이터 로드
+              const dataRange = activeSheet.getRange(0, 0, firstData.length, Math.max(...firstData.map(row => row.length)));
+              dataRange.setValues(firstData);
+              console.log(`✅ 첫 번째 시트 "${firstSheetName}" 업데이트 완료 (${firstData.length}행)`);
             }
 
-            // 새 워크북 생성
-            const newWorkbookData = {
-              name: `${templateType}_workbook`,
-              sheetOrder: [],
-              sheets: {}
-            };
-
-            // 모든 시트 데이터 준비
-            workbook.SheetNames.forEach((sheetName, index) => {
+            // 나머지 시트들 처리 (기존 시트와 중복되지 않게)
+            for (let i = 1; i < workbook.SheetNames.length; i++) {
+              const sheetName = workbook.SheetNames[i];
               const worksheet = workbook.Sheets[sheetName];
               const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
               if (data.length > 0) {
-                const sheetId = `sheet_${index}`;
-                newWorkbookData.sheetOrder.push(sheetId);
-                newWorkbookData.sheets[sheetId] = {
-                  name: sheetName,
-                  id: sheetId,
-                  cellData: {}
-                };
+                try {
+                  // 중복 이름 방지
+                  let finalSheetName = sheetName;
+                  let counter = 1;
+                  while (existingSheetNames.includes(finalSheetName)) {
+                    finalSheetName = `${sheetName}_${counter}`;
+                    counter++;
+                  }
+                  existingSheetNames.push(finalSheetName);
 
-                // 셀 데이터 변환
-                data.forEach((row, rowIndex) => {
-                  row.forEach((cellValue, colIndex) => {
-                    if (cellValue !== null && cellValue !== undefined && cellValue !== '') {
-                      if (!newWorkbookData.sheets[sheetId].cellData[rowIndex]) {
-                        newWorkbookData.sheets[sheetId].cellData[rowIndex] = {};
-                      }
-                      newWorkbookData.sheets[sheetId].cellData[rowIndex][colIndex] = {
-                        v: cellValue
-                      };
-                    }
-                  });
-                });
-
-                console.log(`✅ 시트 "${sheetName}" 준비 완료 (${data.length}행)`);
+                  const maxCols = Math.max(...data.map(row => row.length)) || 1;
+                  const newSheet = activeWorkbook.create(finalSheetName, data.length, maxCols);
+                  const dataRange = newSheet.getRange(0, 0, data.length, maxCols);
+                  dataRange.setValues(data);
+                  console.log(`✅ 시트 "${finalSheetName}" 추가 완료 (${data.length}행 x ${maxCols}열)`);
+                } catch (error) {
+                  console.warn(`⚠️ 시트 "${sheetName}" 생성 실패:`, error.message);
+                }
               }
-            });
+            }
 
-            // 새 워크북 생성
-            const newWorkbook = univerAPI.createWorkbook(newWorkbookData);
-            setStatus(`✅ ${templateType} 새 워크북 생성 완료 (${workbook.SheetNames.length}개 시트)`);
+            setStatus(`✅ ${templateType} 워크북 업데이트 완료 (${workbook.SheetNames.length}개 시트)`);
           } else {
             throw new Error('시트가 없습니다');
           }
